@@ -14,16 +14,16 @@ packet_statistics = Struct(
 )
 
 packet_boss_bar = Struct(
-    "entityUUID"/ String(36, "utf-8"),
+    "entityUUID" / String(36, "utf-8"),
     "action" / VarInt,
-    "title"/ Switch(this.action,
+    "title" / Switch(this.action,
         {
-            0:PascalString(VarInt, "utf-8"),
-            3:PascalString(VarInt, "utf-8")
+            0: PascalString(VarInt, "utf-8"),
+            3: PascalString(VarInt, "utf-8")
         }),
     "health" / Switch(this.action,
         {
-        0:Float32b,
+        0: Float32b,
         2:Float32b
         }),
     "color" / Switch(this.action,
