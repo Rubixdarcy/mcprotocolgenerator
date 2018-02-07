@@ -40,7 +40,7 @@ main = readFile sourcePath >>= \j ->
                  case parse (\jData -> (jData .: "play") >>= (.: "toClient") >>= (.: "types") >>= (.: "packet")) jsonData of
                       Success value ->
                           case parse (parseMCType typeRef) value of
-                               Success mcType -> print mcType
+                               Success mcType -> renderMCType 0 mcType
 --            return $ parseMCType typeData packetData
  --       of 
  --           Success a -> show a
@@ -115,18 +115,24 @@ renderMCType :: Int -> MCType -> IO()
 renderMCType n (Container fields) = do
     putStr "Struct (\n"
     sequence_ [renderIndent (n+1) >> renderMCField (n+1) f | f <- fields]
-    putStr "\n"
+    --putStr "\n"
     renderIndent n
     putStr ")\n"
+renderMCType n (Switch on items def) = do
+    putStr "Switch (this." 
+    TextIO.putStr on
+    putStr ", {\n"
+    sequence_ [renderIndent (n+1) >> putStr (show k) >> putStr ": " >> renderMCType (n+1) v | (k, v) <- Map.toList items]
+    renderIndent n
+    putStr "})\n"
 renderMCType _ _ = putStr " # unfinished type \n"
 
 renderMCField :: Int -> MCField -> IO ()
 renderMCField n field = do
-    renderIndent n
     let (name, mcType) = case field of
                              Named na t -> (na, t)
                              Anon t -> ("anon", t)
     putStr "\""
     TextIO.putStr name
     putStr "\" / "
-    renderMCType (n+1) mcType
+    renderMCType (n) mcType
