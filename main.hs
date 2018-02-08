@@ -12,6 +12,7 @@ import Control.Applicative (liftA2, liftA3)
 import Data.Foldable (foldl)
 import Debug.Trace
 import qualified Data.Text.IO as TextIO
+import Data.List (find)
 
 
 data MCField = Named Text MCType | Anon MCType deriving (Show)
@@ -40,7 +41,7 @@ main = readFile sourcePath >>= \j ->
                  case parse (\jData -> (jData .: "play") >>= (.: "toClient") >>= (.: "types") >>= (.: "packet")) jsonData of
                       Success value ->
                           case parse (parseMCType typeRef) value of
-                               Success mcType -> renderMCType 0 mcType
+                               Success mcType -> renderTopLevel mcType--renderMCType 0 mcType
 --            return $ parseMCType typeData packetData
  --       of 
  --           Success a -> show a
@@ -74,7 +75,7 @@ parseMCType typeRef value =
                           "restBuffer"  -> return RestBuffer
                           "nbt"         -> return NBT
                           "optionalNbt" -> return OptionalNBT
-                          _ -> typeRef .: t >>= parseMCType typeRef
+                          other -> typeRef .: t >>= parseMCType typeRef
          Array v -> do  v0 <- v `getItem` 0
                         v1 <- v `getItem` 1
                         case v0 of
@@ -90,6 +91,7 @@ parseMCType typeRef value =
                                                ((o .: "fields") >>= withObject "switch mapping" (parseMap typeRef))
                                                (((o .:? "default") .!= String "void") >>= parseMCType typeRef)
                                          ) v1
+                             "pstring" -> PString <$> parseMCType typeRef v1
                              _ -> return Void -- Unknown complex type
          _ -> return U8
 
@@ -108,6 +110,25 @@ parseMCField typeRef =
                  Nothing -> liftA2 Named (o .: "name") ((o .: "type") >>= parseMCType typeRef)
                  Just v -> typeMismatch "anonymous field" v
 
+-- RENDERING
+--
+
+renderTopLevel :: MCType -> IO ()
+renderTopLevel (Container fields) =
+    let m = find (\f ->
+                    case f of
+                         Named "params" _ -> True
+                         Anon _ -> False
+                 ) fields in
+    case m of
+         Just (Named _ (Switch _ packets _)) ->
+             sequence_ [do putStr "packet_"
+                           TextIO.putStr p
+                           putStr " = "
+                           renderMCType 0 t
+                        | (p, t) <- Map.toList packets]
+         _ -> error "Failed to find a valid params field"
+
 renderIndent :: Int -> IO ()
 renderIndent n = putStr $ concat $ replicate (n * 4) " "
 
@@ -118,14 +139,25 @@ renderMCType n (Container fields) = do
     --putStr "\n"
     renderIndent n
     putStr ")\n"
-renderMCType n (Switch on items def) = do
+renderMCType n (Switch on items _) = do -- TODO handle default
     putStr "Switch (this." 
     TextIO.putStr on
     putStr ", {\n"
     sequence_ [renderIndent (n+1) >> putStr (show k) >> putStr ": " >> renderMCType (n+1) v | (k, v) <- Map.toList items]
     renderIndent n
     putStr "})\n"
-renderMCType _ _ = putStr " # unfinished type \n"
+renderMCType _ (PString _) = putStr "PascalString(VarInt, \"utf-8\"),\n"
+renderMCType _ F32 = putStr "Float32b,\n"
+renderMCType _ F64 = putStr "Float64b,\n"
+renderMCType _ U8  = putStr "Int8un,\n"
+renderMCType _ U16 = putStr "Int16un,\n"
+renderMCType _ I8 = putStr "Int8sn,\n"
+renderMCType _ I16 = putStr "Int16sn,\n"
+renderMCType _ I32 = putStr "Int32sn,\n"
+renderMCType _ I64 = putStr "Int64sn,\n"
+renderMCType _ VarInt = putStr "VarInt,\n"
+renderMCType _ MCBool = putStr "Flag,\n"
+renderMCType _ mcType = putStr $ " # unfinished type " ++ take 10 (show mcType) ++ "\n"
 
 renderMCField :: Int -> MCField -> IO ()
 renderMCField n field = do
