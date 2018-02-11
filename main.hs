@@ -142,6 +142,12 @@ renderTopLevel _ = error "Top level object should be a contaianer"
 renderIndent :: Int -> IO ()
 renderIndent n = putStr $ concat $ replicate (n * 4) " "
 
+hanging :: Int -> MCType -> IO ()
+hanging n mcType = renderIndent n >> renderMCType n mcType
+
+closeParen :: Int -> IO ()
+closeParen n = renderIndent n >> putStr ")\n"
+
 renderMCType :: Int -> MCType -> IO()
 renderMCType n (Container fields) = do
     putStr "Struct(\n"
@@ -166,7 +172,6 @@ renderMCType n (Bitfield arr) = do
         ) <$> arr)
     renderIndent n
     putStr ")\n"
-
 renderMCType _ (PString _) = putStr "PascalString(VarInt, \"utf-8\"),\n"
 renderMCType _ F32    = putStr "Float32b,\n"
 renderMCType _ F64    = putStr "Float64b,\n"
@@ -183,20 +188,19 @@ renderMCType _ MCBool = putStr "Flag,\n"
 renderMCType _ UUID   = putStr "String(32),\n"
 renderMCType _ NBT    = putStr "NBT,\n"
 renderMCType _ OptionalNBT = putStr "Select(Value(b\"\\x00\"), NBT),\n"
+renderMCType n (Buffer mcType) = do
+    putStr "PrefixedBuffer(\n"
+    hanging (n+1) mcType
+    closeParen n
 renderMCType n (MCArray countType dataType) = do
     putStr "Array(\n"
-    renderIndent (n+1)
-    renderMCType (n+1) countType
-    renderIndent (n+1)
-    renderMCType (n+1) dataType
-    renderIndent n
-    putStr ")\n"
+    hanging (n+1) countType
+    hanging (n+1) dataType
+    closeParen n
 renderMCType n (Option mcType) = do
     putStr "Optional(\n"
-    renderIndent (n+1)
-    renderMCType (n+1) mcType
-    renderIndent n
-    putStr ")\n"
+    hanging (n+1) mcType
+    closeParen n
 renderMCType _ mcType = putStr $ " # unfinished type " ++ take 10 (show mcType) ++ "\n"
 
 renderMCField :: Int -> MCField -> IO ()
