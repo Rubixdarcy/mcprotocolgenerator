@@ -9,6 +9,7 @@ import Data.Maybe (fromJust)
 import Data.Text (Text)
 import qualified Data.Vector as Vec
 import Control.Applicative (liftA2, liftA3)
+import Control.Monad (void)
 import qualified Data.Text.IO as TextIO
 import Data.List (find)
 import Debug.Trace
@@ -37,12 +38,16 @@ sourcePath = "minecraft-data/data/pc/1.12.2/protocol.json"
 main :: IO ()
 main = readFile sourcePath >>= \j ->
     let jsonData = fromJust $ (decode :: ByteString -> Maybe Object) j in
+        mainMCType jsonData -- >> putStr "\n\n\n" >> mainMapping jsonData
+
+mainMCType :: Object -> IO ()
+mainMCType jsonData =
         case parse getTypeHashMapParser jsonData of
              Success typeRef ->
                  case parse (\jData -> (jData .: "play") >>= (.: "toClient") >>= (.: "types") >>= (.: "packet")) jsonData of
                       Success value ->
                           case parse (parseMCType typeRef) value of
-                               Success mcType -> renderTopLevel mcType--renderMCType 0 mcType
+                               Success mcType -> renderTopLevel mcType
                                Error err -> print err
                       _ -> error "Failed to parse top level"
              _ -> error "Failed to parse top level"
@@ -50,6 +55,33 @@ main = readFile sourcePath >>= \j ->
 getTypeHashMapParser :: Object -> Parser Object
 getTypeHashMapParser root =
     liftA2 Map.union (root .: "types")  (root .: "play" >>= (.: "toClient") >>= (.: "types"))
+
+
+mainMapping :: Object -> IO ()
+mainMapping jsonData =
+   case parse (\jData -> let k = (jData .: "play" )  >>= (.: "toClient") >>= (.: "types") >>= (.: "packet") in
+                                   ((Vec.! 1) <$> k)
+                  --((Vec.! 1) <$> (((Vec.! 0) <$> ((Vec.! 1) <$> k)) >>= (.: "type"))) >>= (.: "mappings")
+              ) jsonData of
+       Success obj -> print (obj :: Value)
+       Error e -> print e
+
+-- .:v :: TOJSON a => Parser Array -> Int -> Parser a
+-- .:v arrayParser n = arrayParser >>=
+
+printMapping :: Map.HashMap Text Text -> IO ()
+printMapping o = void (sequence_ (printMappingItem <$> Map.toList o))
+--printMapping o = sequence_ <$> traverse (\(pid, packet) ->
+  --                                     printMappingItem (pid, packet)
+    --                           ) (Map.toList o
+
+printMappingItem :: (Text, Text) -> IO()
+printMappingItem (key, value) = do
+    putStr "    "
+    TextIO.putStr key
+    putStr ": \""
+    TextIO.putStr value
+    putStr "\",\\n"
 
 getItem :: Vec.Vector Value -> Int -> Parser Value
 getItem v n = case v Vec.!? n of
@@ -201,7 +233,7 @@ renderMCType n (Option mcType) = do
     putStr "Optional(\n"
     hanging (n+1) mcType
     closeParen n
-renderMCType _ mcType = putStr $ " # unfinished type " ++ take 10 (show mcType) ++ "\n"
+renderMCType _ mcType = putStr $ "Pass,  # unfinished type " ++ take 10 (show mcType) ++ "\n"
 
 renderMCField :: Int -> MCField -> IO ()
 renderMCField n field = do
