@@ -1,0 +1,6 @@
+multiple types are missing commans after the closing bracket
+comparing to parent in switch statements
+default case in switch statements
+there is a slash in some switch comparisons
+there is no construct literal called 'Value'
+change Constant to Const
