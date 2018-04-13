@@ -6,13 +6,14 @@ import Data.ByteString.Lazy (readFile, ByteString)
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Maybe (fromJust)
-import Data.Text (Text)
+import Data.Text (Text, unpack)
 import qualified Data.Vector as Vec
 import Control.Applicative (liftA2, liftA3)
 import Control.Monad (void)
 import qualified Data.Text.IO as TextIO
 import Data.List (find)
 import Debug.Trace
+import Data.List.Split (splitOn)
 
 
 data MCField = Named Text MCType | Anon MCType deriving (Show)
@@ -31,6 +32,19 @@ data MCType = VarInt | U16 | U8 | I64 | I32 | I8 | MCBool |
             | UNKNOWN
             deriving (Show)
 
+data PathElement = Literal String | DotDot deriving (Show)
+
+makePath :: String -> [PathElement]
+makePath t = makeElement <$> splitOn "/" t
+  where
+    makeElement ".." = DotDot
+    makeElement s = Literal s
+
+renderPath :: [PathElement] -> IO ()
+renderPath path = mapM_ renderElement path
+  where
+    renderElement (Literal s) = putStr $ "." ++ s
+    renderElement DotDot      = putStr "._"
 
 sourcePath :: String
 sourcePath = "minecraft-data/data/pc/1.12.2/protocol.json"
@@ -178,7 +192,7 @@ hanging :: Int -> MCType -> IO ()
 hanging n mcType = renderIndent n >> renderMCType n mcType
 
 closeParen :: Int -> IO ()
-closeParen n = renderIndent n >> putStr ")\n"
+closeParen n = renderIndent n >> putStr "),\n"
 
 renderMCType :: Int -> MCType -> IO()
 renderMCType n (Container fields) = do
@@ -186,14 +200,14 @@ renderMCType n (Container fields) = do
     sequence_ [renderIndent (n+1) >> renderMCField (n+1) f | f <- fields]
     --putStr "\n"
     renderIndent n
-    putStr ")\n"
+    putStr "),\n"
 renderMCType n (Switch on items _) = do -- TODO handle default
-    putStr "Switch(this."
-    TextIO.putStr on
+    putStr "Switch(this"
+    renderPath $ makePath $ unpack on
     putStr ", {\n"
     sequence_ [renderIndent (n+1) >> putStr (show k) >> putStr ": " >> renderMCType (n+1) v | (k, v) <- Map.toList items]
     renderIndent n
-    putStr "})\n"
+    putStr "}),\n"
 renderMCType n (Bitfield arr) = do
     putStr "BitStruct(\n"
     sequence_ (( \(name, size, signed) ->
@@ -203,7 +217,7 @@ renderMCType n (Bitfield arr) = do
            putStr $ "\" / BitsInteger(" ++ show size ++ ", signed=" ++ show signed ++ "),\n"
         ) <$> arr)
     renderIndent n
-    putStr ")\n"
+    putStr "),\n"
 renderMCType _ (PString _) = putStr "PascalString(VarInt, \"utf-8\"),\n"
 renderMCType _ F32    = putStr "Float32b,\n"
 renderMCType _ F64    = putStr "Float64b,\n"
