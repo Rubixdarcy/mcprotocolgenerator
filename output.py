@@ -1,154 +1,241 @@
-packet_abilities = Struct(
-    "flags" / Int8sn,
+packet_abilities, _ = (Struct(
+    "flags" / Int8sb,
     "flyingSpeed" / Float32b,
     "walkingSpeed" / Float32b,
 ),
-packet_respawn = Struct(
-    "dimension" / Int32sn,
-    "difficulty" / Int8un,
-    "gamemode" / Int8un,
+None)
+
+
+packet_respawn, _ = (Struct(
+    "dimension" / Int32sb,
+    "difficulty" / Int8ub,
+    "gamemode" / Int8ub,
     "levelType" / PascalString(VarInt, "utf-8"),
 ),
-packet_resource_pack_send = Struct(
+None)
+
+
+packet_resource_pack_send, _ = (Struct(
     "url" / PascalString(VarInt, "utf-8"),
     "hash" / PascalString(VarInt, "utf-8"),
 ),
-packet_select_advancement_tab = Struct(
+None)
+
+
+packet_select_advancement_tab, _ = (Struct(
     "id" / Optional(
         PascalString(VarInt, "utf-8"),
     ),
 ),
-packet_spawn_entity = Struct(
+None)
+
+
+packet_spawn_entity, _ = (Struct(
     "entityId" / VarInt,
-    "objectUUID" / String(32),
-    "type" / Int8sn,
+    "objectUUID" / PaddedString(16, "utf8"),
+    "type" / Int8sb,
     "x" / Float64b,
     "y" / Float64b,
     "z" / Float64b,
-    "pitch" / Int8sn,
-    "yaw" / Int8sn,
-    "intField" / Int32sn,
-    "velocityX" / Int16sn,
-    "velocityY" / Int16sn,
-    "velocityZ" / Int16sn,
+    "pitch" / Int8sb,
+    "yaw" / Int8sb,
+    "intField" / Int32sb,
+    "velocityX" / Int16sb,
+    "velocityY" / Int16sb,
+    "velocityZ" / Int16sb,
 ),
-packet_open_window = Struct(
-    "windowId" / Int8un,
+None)
+
+
+packet_open_window, _ = (Struct(
+    "windowId" / Int8ub,
     "inventoryType" / PascalString(VarInt, "utf-8"),
     "windowTitle" / PascalString(VarInt, "utf-8"),
-    "slotCount" / Int8un,
-    "entityId" / Switch(this.inventoryType, {
-        "EntityHorse": Int32sn,
-    }),
+    "slotCount" / Int8ub,
+    "entityId" / Switch(
+        this.inventoryType,
+        {
+            EntityHorse: Int32sb,
+        },
+        default=Pass,
+    ),
 ),
-packet_tile_entity_data = Struct(
+None)
+
+
+packet_tile_entity_data, _ = (Struct(
     "location" / BitStruct(
         "x" / BitsInteger(26, signed=True),
         "y" / BitsInteger(12, signed=True),
         "z" / BitsInteger(26, signed=True),
     ),
-    "action" / Int8un,
-    "nbtData" / Select(Value(b"\x00"), NBT),
+    "action" / Int8ub,
+    "nbtData" / Select(Const(b"\x00"), NBT),
 ),
-packet_entity_head_rotation = Struct(
+None)
+
+
+packet_entity_head_rotation, _ = (Struct(
     "entityId" / VarInt,
-    "headYaw" / Int8sn,
+    "headYaw" / Int8sb,
 ),
-packet_update_health = Struct(
+None)
+
+
+packet_update_health, _ = (Struct(
     "health" / Float32b,
     "food" / VarInt,
     "foodSaturation" / Float32b,
 ),
-packet_spawn_entity_painting = Struct(
+None)
+
+
+packet_spawn_entity_painting, _ = (Struct(
     "entityId" / VarInt,
-    "entityUUID" / String(32),
+    "entityUUID" / PaddedString(16, "utf8"),
     "title" / PascalString(VarInt, "utf-8"),
     "location" / BitStruct(
         "x" / BitsInteger(26, signed=True),
         "y" / BitsInteger(12, signed=True),
         "z" / BitsInteger(26, signed=True),
     ),
-    "direction" / Int8un,
+    "direction" / Int8ub,
 ),
-packet_remove_entity_effect = Struct(
+None)
+
+
+packet_remove_entity_effect, _ = (Struct(
     "entityId" / VarInt,
-    "effectId" / Int8sn,
+    "effectId" / Int8sb,
 ),
-packet_kick_disconnect = Struct(
+None)
+
+
+packet_kick_disconnect, _ = (Struct(
     "reason" / PascalString(VarInt, "utf-8"),
 ),
-packet_spawn_position = Struct(
+None)
+
+
+packet_spawn_position, _ = (Struct(
     "location" / BitStruct(
         "x" / BitsInteger(26, signed=True),
         "y" / BitsInteger(12, signed=True),
         "z" / BitsInteger(26, signed=True),
     ),
 ),
-packet_close_window = Struct(
-    "windowId" / Int8un,
+None)
+
+
+packet_close_window, _ = (Struct(
+    "windowId" / Int8ub,
 ),
-packet_block_break_animation = Struct(
+None)
+
+
+packet_block_break_animation, _ = (Struct(
     "entityId" / VarInt,
     "location" / BitStruct(
         "x" / BitsInteger(26, signed=True),
         "y" / BitsInteger(12, signed=True),
         "z" / BitsInteger(26, signed=True),
     ),
-    "destroyStage" / Int8sn,
+    "destroyStage" / Int8sb,
 ),
-packet_set_cooldown = Struct(
+None)
+
+
+packet_set_cooldown, _ = (Struct(
     "itemID" / VarInt,
     "cooldownTicks" / VarInt,
 ),
-packet_keep_alive = Struct(
-    "keepAliveId" / Int64sn,
+None)
+
+
+packet_keep_alive, _ = (Struct(
+    "keepAliveId" / Int64sb,
 ),
-packet_boss_bar = Struct(
-    "entityUUID" / String(32),
+None)
+
+
+packet_boss_bar, _ = (Struct(
+    "entityUUID" / PaddedString(16, "utf8"),
     "action" / VarInt,
-    "title" / Switch(this.action, {
-        "0": PascalString(VarInt, "utf-8"),
-        "3": PascalString(VarInt, "utf-8"),
-    }),
-    "health" / Switch(this.action, {
-        "0": Float32b,
-        "2": Float32b,
-    }),
-    "color" / Switch(this.action, {
-        "0": VarInt,
-        "4": VarInt,
-    }),
-    "dividers" / Switch(this.action, {
-        "0": VarInt,
-        "4": VarInt,
-    }),
-    "flags" / Switch(this.action, {
-        "0": Int8un,
-        "5": Int8un,
-    }),
+    "title" / Switch(
+        this.action,
+        {
+            0: PascalString(VarInt, "utf-8"),
+            3: PascalString(VarInt, "utf-8"),
+        },
+        default=Pass,
+    ),
+    "health" / Switch(
+        this.action,
+        {
+            0: Float32b,
+            2: Float32b,
+        },
+        default=Pass,
+    ),
+    "color" / Switch(
+        this.action,
+        {
+            0: VarInt,
+            4: VarInt,
+        },
+        default=Pass,
+    ),
+    "dividers" / Switch(
+        this.action,
+        {
+            0: VarInt,
+            4: VarInt,
+        },
+        default=Pass,
+    ),
+    "flags" / Switch(
+        this.action,
+        {
+            0: Int8ub,
+            5: Int8ub,
+        },
+        default=Pass,
+    ),
 ),
-packet_entity_velocity = Struct(
+None)
+
+
+packet_entity_velocity, _ = (Struct(
     "entityId" / VarInt,
-    "velocityX" / Int16sn,
-    "velocityY" / Int16sn,
-    "velocityZ" / Int16sn,
+    "velocityX" / Int16sb,
+    "velocityY" / Int16sb,
+    "velocityZ" / Int16sb,
 ),
-packet_sound_effect = Struct(
+None)
+
+
+packet_sound_effect, _ = (Struct(
     "soundId" / VarInt,
     "soundCategory" / VarInt,
-    "x" / Int32sn,
-    "y" / Int32sn,
-    "z" / Int32sn,
+    "x" / Int32sb,
+    "y" / Int32sb,
+    "z" / Int32sb,
     "volume" / Float32b,
     "pitch" / Float32b,
 ),
-packet_entity_look = Struct(
+None)
+
+
+packet_entity_look, _ = (Struct(
     "entityId" / VarInt,
-    "yaw" / Int8sn,
-    "pitch" / Int8sn,
+    "yaw" / Int8sb,
+    "pitch" / Int8sb,
     "onGround" / Flag,
 ),
-packet_bed = Struct(
+None)
+
+
+packet_bed, _ = (Struct(
     "entityId" / VarInt,
     "location" / BitStruct(
         "x" / BitsInteger(26, signed=True),
@@ -156,261 +243,440 @@ packet_bed = Struct(
         "z" / BitsInteger(26, signed=True),
     ),
 ),
-packet_spawn_entity_experience_orb = Struct(
+None)
+
+
+packet_spawn_entity_experience_orb, _ = (Struct(
     "entityId" / VarInt,
     "x" / Float64b,
     "y" / Float64b,
     "z" / Float64b,
-    "count" / Int16sn,
+    "count" / Int16sb,
 ),
-packet_craft_progress_bar = Struct(
-    "windowId" / Int8un,
-    "property" / Int16sn,
-    "value" / Int16sn,
+None)
+
+
+packet_craft_progress_bar, _ = (Struct(
+    "windowId" / Int8ub,
+    "property" / Int16sb,
+    "value" / Int16sb,
 ),
-packet_chat = Struct(
+None)
+
+
+packet_chat, _ = (Struct(
     "message" / PascalString(VarInt, "utf-8"),
-    "position" / Int8sn,
+    "position" / Int8sb,
 ),
-packet_teams = Struct(
+None)
+
+
+packet_teams, _ = (Struct(
     "team" / PascalString(VarInt, "utf-8"),
-    "mode" / Int8sn,
-    "name" / Switch(this.mode, {
-        "0": PascalString(VarInt, "utf-8"),
-        "2": PascalString(VarInt, "utf-8"),
-    }),
-    "prefix" / Switch(this.mode, {
-        "0": PascalString(VarInt, "utf-8"),
-        "2": PascalString(VarInt, "utf-8"),
-    }),
-    "suffix" / Switch(this.mode, {
-        "0": PascalString(VarInt, "utf-8"),
-        "2": PascalString(VarInt, "utf-8"),
-    }),
-    "friendlyFire" / Switch(this.mode, {
-        "0": Int8sn,
-        "2": Int8sn,
-    }),
-    "nameTagVisibility" / Switch(this.mode, {
-        "0": PascalString(VarInt, "utf-8"),
-        "2": PascalString(VarInt, "utf-8"),
-    }),
-    "collisionRule" / Switch(this.mode, {
-        "0": PascalString(VarInt, "utf-8"),
-        "2": PascalString(VarInt, "utf-8"),
-    }),
-    "color" / Switch(this.mode, {
-        "0": Int8sn,
-        "2": Int8sn,
-    }),
-    "players" / Switch(this.mode, {
-        "0": Array(
-            VarInt,
-            PascalString(VarInt, "utf-8"),
-        ),
-        "4": Array(
-            VarInt,
-            PascalString(VarInt, "utf-8"),
-        ),
-        "3": Array(
-            VarInt,
-            PascalString(VarInt, "utf-8"),
-        ),
-    }),
+    "mode" / Int8sb,
+    "name" / Switch(
+        this.mode,
+        {
+            0: PascalString(VarInt, "utf-8"),
+            2: PascalString(VarInt, "utf-8"),
+        },
+        default=Pass,
+    ),
+    "prefix" / Switch(
+        this.mode,
+        {
+            0: PascalString(VarInt, "utf-8"),
+            2: PascalString(VarInt, "utf-8"),
+        },
+        default=Pass,
+    ),
+    "suffix" / Switch(
+        this.mode,
+        {
+            0: PascalString(VarInt, "utf-8"),
+            2: PascalString(VarInt, "utf-8"),
+        },
+        default=Pass,
+    ),
+    "friendlyFire" / Switch(
+        this.mode,
+        {
+            0: Int8sb,
+            2: Int8sb,
+        },
+        default=Pass,
+    ),
+    "nameTagVisibility" / Switch(
+        this.mode,
+        {
+            0: PascalString(VarInt, "utf-8"),
+            2: PascalString(VarInt, "utf-8"),
+        },
+        default=Pass,
+    ),
+    "collisionRule" / Switch(
+        this.mode,
+        {
+            0: PascalString(VarInt, "utf-8"),
+            2: PascalString(VarInt, "utf-8"),
+        },
+        default=Pass,
+    ),
+    "color" / Switch(
+        this.mode,
+        {
+            0: Int8sb,
+            2: Int8sb,
+        },
+        default=Pass,
+    ),
+    "players" / Switch(
+        this.mode,
+        {
+            0: PrefixedArray(
+                VarInt,
+                PascalString(VarInt, "utf-8"),
+            ),
+            4: PrefixedArray(
+                VarInt,
+                PascalString(VarInt, "utf-8"),
+            ),
+            3: PrefixedArray(
+                VarInt,
+                PascalString(VarInt, "utf-8"),
+            ),
+        },
+        default=Pass,
+    ),
 ),
-packet_collect = Struct(
+None)
+
+
+packet_collect, _ = (Struct(
     "collectedEntityId" / VarInt,
     "collectorEntityId" / VarInt,
     "pickupItemCount" / VarInt,
 ),
-packet_multi_block_change = Struct(
-    "chunkX" / Int32sn,
-    "chunkZ" / Int32sn,
-    "records" / Array(
+None)
+
+
+packet_multi_block_change, _ = (Struct(
+    "chunkX" / Int32sb,
+    "chunkZ" / Int32sb,
+    "records" / PrefixedArray(
         VarInt,
         Struct(
-            "horizontalPos" / Int8un,
-            "y" / Int8un,
+            "horizontalPos" / Int8ub,
+            "y" / Int8ub,
             "blockId" / VarInt,
         ),
     ),
 ),
-packet_vehicle_move = Struct(
+None)
+
+
+packet_vehicle_move, _ = (Struct(
     "x" / Float64b,
     "y" / Float64b,
     "z" / Float64b,
     "yaw" / Float32b,
     "pitch" / Float32b,
 ),
-packet_tab_complete = Struct(
-    "matches" / Array(
+None)
+
+
+packet_tab_complete, _ = (Struct(
+    "matches" / PrefixedArray(
         VarInt,
         PascalString(VarInt, "utf-8"),
     ),
 ),
-packet_world_border = Struct(
+None)
+
+
+packet_world_border, _ = (Struct(
     "action" / VarInt,
-    "radius" / Switch(this.action, {
-        "0": Float64b,
-    }),
-    "x" / Switch(this.action, {
-        "2": Float64b,
-        "3": Float64b,
-    }),
-    "z" / Switch(this.action, {
-        "2": Float64b,
-        "3": Float64b,
-    }),
-    "old_radius" / Switch(this.action, {
-        "1": Float64b,
-        "3": Float64b,
-    }),
-    "new_radius" / Switch(this.action, {
-        "1": Float64b,
-        "3": Float64b,
-    }),
-    "speed" / Switch(this.action, {
-        "1": VarInt,
-        "3": VarInt,
-    }),
-    "portalBoundary" / Switch(this.action, {
-        "3": VarInt,
-    }),
-    "warning_time" / Switch(this.action, {
-        "4": VarInt,
-        "3": VarInt,
-    }),
-    "warning_blocks" / Switch(this.action, {
-        "5": VarInt,
-        "3": VarInt,
-    }),
-),
-packet_unload_chunk = Struct(
-    "chunkX" / Int32sn,
-    "chunkZ" / Int32sn,
-),
-packet_set_slot = Struct(
-    "windowId" / Int8sn,
-    "slot" / Int16sn,
-    "item" / Struct(
-        "blockId" / Int16sn,
-        "anon" / Switch(this.blockId, {
-            "-1": Pass,
-        }),
+    "radius" / Switch(
+        this.action,
+        {
+            0: Float64b,
+        },
+        default=Pass,
+    ),
+    "x" / Switch(
+        this.action,
+        {
+            2: Float64b,
+            3: Float64b,
+        },
+        default=Pass,
+    ),
+    "z" / Switch(
+        this.action,
+        {
+            2: Float64b,
+            3: Float64b,
+        },
+        default=Pass,
+    ),
+    "old_radius" / Switch(
+        this.action,
+        {
+            1: Float64b,
+            3: Float64b,
+        },
+        default=Pass,
+    ),
+    "new_radius" / Switch(
+        this.action,
+        {
+            1: Float64b,
+            3: Float64b,
+        },
+        default=Pass,
+    ),
+    "speed" / Switch(
+        this.action,
+        {
+            1: VarInt,
+            3: VarInt,
+        },
+        default=Pass,
+    ),
+    "portalBoundary" / Switch(
+        this.action,
+        {
+            3: VarInt,
+        },
+        default=Pass,
+    ),
+    "warning_time" / Switch(
+        this.action,
+        {
+            4: VarInt,
+            3: VarInt,
+        },
+        default=Pass,
+    ),
+    "warning_blocks" / Switch(
+        this.action,
+        {
+            5: VarInt,
+            3: VarInt,
+        },
+        default=Pass,
     ),
 ),
-packet_world_event = Struct(
-    "effectId" / Int32sn,
+None)
+
+
+packet_unload_chunk, _ = (Struct(
+    "chunkX" / Int32sb,
+    "chunkZ" / Int32sb,
+),
+None)
+
+
+packet_set_slot, _ = (Struct(
+    "windowId" / Int8sb,
+    "slot" / Int16sb,
+    "item" / Struct(
+        "blockId" / Int16sb,
+        "anon" / Switch(
+            this.blockId,
+            {
+                -1: Pass,
+            },
+            default=Struct(
+                "itemCount" / Int8sb,
+                "itemDamage" / Int16sb,
+                "nbtData" / Select(Const(b"\x00"), NBT),
+            ),
+        ),
+    ),
+),
+None)
+
+
+packet_world_event, _ = (Struct(
+    "effectId" / Int32sb,
     "location" / BitStruct(
         "x" / BitsInteger(26, signed=True),
         "y" / BitsInteger(12, signed=True),
         "z" / BitsInteger(26, signed=True),
     ),
-    "data" / Int32sn,
+    "data" / Int32sb,
     "global" / Flag,
 ),
-packet_playerlist_header = Struct(
+None)
+
+
+packet_playerlist_header, _ = (Struct(
     "header" / PascalString(VarInt, "utf-8"),
     "footer" / PascalString(VarInt, "utf-8"),
 ),
-packet_craft_recipe_response = Struct(
-    "windowId" / Int8sn,
+None)
+
+
+packet_craft_recipe_response, _ = (Struct(
+    "windowId" / Int8sb,
     "recipe" / VarInt,
 ),
-packet_entity_metadata = Struct(
+None)
+
+
+packet_entity_metadata, _ = (Struct(
     "entityId" / VarInt,
     "metadata" / Pass,  # unfinished type UNKNOWN
 ),
-packet_unlock_recipes = Struct(
+None)
+
+
+packet_unlock_recipes, _ = (Struct(
     "action" / VarInt,
     "craftingBookOpen" / Flag,
     "filteringCraftable" / Flag,
-    "recipes1" / Array(
+    "recipes1" / PrefixedArray(
         VarInt,
         VarInt,
     ),
-    "recipes2" / Switch(this.action, {
-        "0": Array(
-            VarInt,
-            VarInt,
-        ),
-    }),
+    "recipes2" / Switch(
+        this.action,
+        {
+            0: PrefixedArray(
+                VarInt,
+                VarInt,
+            ),
+        },
+        default=Pass,
+    ),
 ),
-packet_transaction = Struct(
-    "windowId" / Int8sn,
-    "action" / Int16sn,
+None)
+
+
+packet_transaction, _ = (Struct(
+    "windowId" / Int8sb,
+    "action" / Int16sb,
     "accepted" / Flag,
 ),
-packet_held_item_slot = Struct(
-    "slot" / Int8sn,
+None)
+
+
+packet_held_item_slot, _ = (Struct(
+    "slot" / Int8sb,
 ),
-packet_open_sign_entity = Struct(
+None)
+
+
+packet_open_sign_entity, _ = (Struct(
     "location" / BitStruct(
         "x" / BitsInteger(26, signed=True),
         "y" / BitsInteger(12, signed=True),
         "z" / BitsInteger(26, signed=True),
     ),
 ),
-packet_set_passengers = Struct(
+None)
+
+
+packet_set_passengers, _ = (Struct(
     "entityId" / VarInt,
-    "passengers" / Array(
+    "passengers" / PrefixedArray(
         VarInt,
         VarInt,
     ),
 ),
-packet_map = Struct(
+None)
+
+
+packet_map, _ = (Struct(
     "itemDamage" / VarInt,
-    "scale" / Int8sn,
+    "scale" / Int8sb,
     "trackingPosition" / Flag,
-    "icons" / Array(
+    "icons" / PrefixedArray(
         VarInt,
         Struct(
-            "directionAndType" / Int8sn,
-            "x" / Int8sn,
-            "y" / Int8sn,
+            "directionAndType" / Int8sb,
+            "x" / Int8sb,
+            "y" / Int8sb,
         ),
     ),
-    "columns" / Int8sn,
-    "rows" / Switch(this.columns, {
-        "0": Pass,
-    }),
-    "x" / Switch(this.columns, {
-        "0": Pass,
-    }),
-    "y" / Switch(this.columns, {
-        "0": Pass,
-    }),
-    "data" / Switch(this.columns, {
-        "0": Pass,
-    }),
+    "columns" / Int8sb,
+    "rows" / Switch(
+        this.columns,
+        {
+            0: Pass,
+        },
+        default=Int8sb,
+    ),
+    "x" / Switch(
+        this.columns,
+        {
+            0: Pass,
+        },
+        default=Int8sb,
+    ),
+    "y" / Switch(
+        this.columns,
+        {
+            0: Pass,
+        },
+        default=Int8sb,
+    ),
+    "data" / Switch(
+        this.columns,
+        {
+            0: Pass,
+        },
+        default=PrefixedBuffer(
+            VarInt,
+        ),
+    ),
 ),
-packet_named_sound_effect = Struct(
+None)
+
+
+packet_named_sound_effect, _ = (Struct(
     "soundName" / PascalString(VarInt, "utf-8"),
     "soundCategory" / VarInt,
-    "x" / Int32sn,
-    "y" / Int32sn,
-    "z" / Int32sn,
+    "x" / Int32sb,
+    "y" / Int32sb,
+    "z" / Int32sb,
     "volume" / Float32b,
     "pitch" / Float32b,
 ),
-packet_game_state_change = Struct(
-    "reason" / Int8un,
+None)
+
+
+packet_game_state_change, _ = (Struct(
+    "reason" / Int8ub,
     "gameMode" / Float32b,
 ),
-packet_attach_entity = Struct(
-    "entityId" / Int32sn,
-    "vehicleId" / Int32sn,
+None)
+
+
+packet_attach_entity, _ = (Struct(
+    "entityId" / Int32sb,
+    "vehicleId" / Int32sb,
 ),
-packet_scoreboard_display_objective = Struct(
-    "position" / Int8sn,
+None)
+
+
+packet_scoreboard_display_objective, _ = (Struct(
+    "position" / Int8sb,
     "name" / PascalString(VarInt, "utf-8"),
 ),
-packet_custom_payload = Struct(
+None)
+
+
+packet_custom_payload, _ = (Struct(
     "channel" / PascalString(VarInt, "utf-8"),
     "data" / Pass,  # unfinished type RestBuffer
 ),
-packet_world_particles = Struct(
-    "particleId" / Int32sn,
+None)
+
+
+packet_world_particles, _ = (Struct(
+    "particleId" / Int32sb,
     "longDistance" / Flag,
     "x" / Float32b,
     "y" / Float32b,
@@ -419,165 +685,255 @@ packet_world_particles = Struct(
     "offsetY" / Float32b,
     "offsetZ" / Float32b,
     "particleData" / Float32b,
-    "particles" / Int32sn,
-    "data" / Switch(this.particleId, {
-        "37": Array(
-            VarInt,
-            VarInt,
-        ),
-        "36": Array(
-            VarInt,
-            VarInt,
-        ),
-        "38": Array(
-            VarInt,
-            VarInt,
-        ),
-    }),
+    "particles" / Int32sb,
+    "data" / Switch(
+        this.particleId,
+        {
+            37: PrefixedArray(
+                VarInt,
+                VarInt,
+            ),
+            36: PrefixedArray(
+                VarInt,
+                VarInt,
+            ),
+            38: PrefixedArray(
+                VarInt,
+                VarInt,
+            ),
+        },
+        default=Pass,
+    ),
 ),
-packet_scoreboard_objective = Struct(
+None)
+
+
+packet_scoreboard_objective, _ = (Struct(
     "name" / PascalString(VarInt, "utf-8"),
-    "action" / Int8sn,
-    "displayText" / Switch(this.action, {
-        "0": PascalString(VarInt, "utf-8"),
-        "2": PascalString(VarInt, "utf-8"),
-    }),
-    "type" / Switch(this.action, {
-        "0": PascalString(VarInt, "utf-8"),
-        "2": PascalString(VarInt, "utf-8"),
-    }),
+    "action" / Int8sb,
+    "displayText" / Switch(
+        this.action,
+        {
+            0: PascalString(VarInt, "utf-8"),
+            2: PascalString(VarInt, "utf-8"),
+        },
+        default=Pass,
+    ),
+    "type" / Switch(
+        this.action,
+        {
+            0: PascalString(VarInt, "utf-8"),
+            2: PascalString(VarInt, "utf-8"),
+        },
+        default=Pass,
+    ),
 ),
-packet_player_info = Struct(
+None)
+
+
+packet_player_info, _ = (Struct(
     "action" / VarInt,
-    "data" / Array(
+    "data" / PrefixedArray(
         VarInt,
         Struct(
-            "UUID" / String(32),
-            "name" / Switch(this._.action, {
-                "0": PascalString(VarInt, "utf-8"),
-            }),
-            "properties" / Switch(this._.action, {
-                "0": Array(
-                    VarInt,
-                    Struct(
-                        "name" / PascalString(VarInt, "utf-8"),
-                        "value" / PascalString(VarInt, "utf-8"),
-                        "signature" / Optional(
-                            PascalString(VarInt, "utf-8"),
+            "UUID" / PaddedString(16, "utf8"),
+            "name" / Switch(
+                this._.action,
+                {
+                    0: PascalString(VarInt, "utf-8"),
+                },
+                default=Pass,
+            ),
+            "properties" / Switch(
+                this._.action,
+                {
+                    0: PrefixedArray(
+                        VarInt,
+                        Struct(
+                            "name" / PascalString(VarInt, "utf-8"),
+                            "value" / PascalString(VarInt, "utf-8"),
+                            "signature" / Optional(
+                                PascalString(VarInt, "utf-8"),
+                            ),
                         ),
                     ),
-                ),
-            }),
-            "gamemode" / Switch(this._.action, {
-                "0": VarInt,
-                "1": VarInt,
-            }),
-            "ping" / Switch(this._.action, {
-                "0": VarInt,
-                "2": VarInt,
-            }),
-            "displayName" / Switch(this._.action, {
-                "0": Optional(
-                    PascalString(VarInt, "utf-8"),
-                ),
-                "3": Optional(
-                    PascalString(VarInt, "utf-8"),
-                ),
-            }),
+                },
+                default=Pass,
+            ),
+            "gamemode" / Switch(
+                this._.action,
+                {
+                    0: VarInt,
+                    1: VarInt,
+                },
+                default=Pass,
+            ),
+            "ping" / Switch(
+                this._.action,
+                {
+                    0: VarInt,
+                    2: VarInt,
+                },
+                default=Pass,
+            ),
+            "displayName" / Switch(
+                this._.action,
+                {
+                    0: Optional(
+                        PascalString(VarInt, "utf-8"),
+                    ),
+                    3: Optional(
+                        PascalString(VarInt, "utf-8"),
+                    ),
+                },
+                default=Pass,
+            ),
         ),
     ),
 ),
-packet_entity_move_look = Struct(
+None)
+
+
+packet_entity_move_look, _ = (Struct(
     "entityId" / VarInt,
-    "dX" / Int16sn,
-    "dY" / Int16sn,
-    "dZ" / Int16sn,
-    "yaw" / Int8sn,
-    "pitch" / Int8sn,
+    "dX" / Int16sb,
+    "dY" / Int16sb,
+    "dZ" / Int16sb,
+    "yaw" / Int8sb,
+    "pitch" / Int8sb,
     "onGround" / Flag,
 ),
-packet_scoreboard_score = Struct(
+None)
+
+
+packet_scoreboard_score, _ = (Struct(
     "itemName" / PascalString(VarInt, "utf-8"),
-    "action" / Int8sn,
+    "action" / Int8sb,
     "scoreName" / PascalString(VarInt, "utf-8"),
-    "value" / Switch(this.action, {
-        "1": Pass,
-    }),
+    "value" / Switch(
+        this.action,
+        {
+            1: Pass,
+        },
+        default=VarInt,
+    ),
 ),
-packet_entity_update_attributes = Struct(
+None)
+
+
+packet_entity_update_attributes, _ = (Struct(
     "entityId" / VarInt,
-    "properties" / Array(
-        Int32sn,
+    "properties" / PrefixedArray(
+        Int32sb,
         Struct(
             "key" / PascalString(VarInt, "utf-8"),
             "value" / Float64b,
-            "modifiers" / Array(
+            "modifiers" / PrefixedArray(
                 VarInt,
                 Struct(
-                    "uuid" / String(32),
+                    "uuid" / PaddedString(16, "utf8"),
                     "amount" / Float64b,
-                    "operation" / Int8sn,
+                    "operation" / Int8sb,
                 ),
             ),
         ),
     ),
 ),
-packet_window_items = Struct(
-    "windowId" / Int8un,
-    "items" / Array(
-        Int16sn,
+None)
+
+
+packet_window_items, _ = (Struct(
+    "windowId" / Int8ub,
+    "items" / PrefixedArray(
+        Int16sb,
         Struct(
-            "blockId" / Int16sn,
-            "anon" / Switch(this.blockId, {
-                "-1": Pass,
-            }),
+            "blockId" / Int16sb,
+            "anon" / Switch(
+                this.blockId,
+                {
+                    -1: Pass,
+                },
+                default=Struct(
+                    "itemCount" / Int8sb,
+                    "itemDamage" / Int16sb,
+                    "nbtData" / Select(Const(b"\x00"), NBT),
+                ),
+            ),
         ),
     ),
 ),
-packet_explosion = Struct(
+None)
+
+
+packet_explosion, _ = (Struct(
     "x" / Float32b,
     "y" / Float32b,
     "z" / Float32b,
     "radius" / Float32b,
-    "affectedBlockOffsets" / Array(
-        Int32sn,
+    "affectedBlockOffsets" / PrefixedArray(
+        Int32sb,
         Struct(
-            "x" / Int8sn,
-            "y" / Int8sn,
-            "z" / Int8sn,
+            "x" / Int8sb,
+            "y" / Int8sb,
+            "z" / Int8sb,
         ),
     ),
     "playerMotionX" / Float32b,
     "playerMotionY" / Float32b,
     "playerMotionZ" / Float32b,
 ),
-packet_combat_event = Struct(
+None)
+
+
+packet_combat_event, _ = (Struct(
     "event" / VarInt,
-    "duration" / Switch(this.event, {
-        "1": VarInt,
-    }),
-    "playerId" / Switch(this.event, {
-        "2": VarInt,
-    }),
-    "entityId" / Switch(this.event, {
-        "1": Int32sn,
-        "2": Int32sn,
-    }),
-    "message" / Switch(this.event, {
-        "2": PascalString(VarInt, "utf-8"),
-    }),
+    "duration" / Switch(
+        this.event,
+        {
+            1: VarInt,
+        },
+        default=Pass,
+    ),
+    "playerId" / Switch(
+        this.event,
+        {
+            2: VarInt,
+        },
+        default=Pass,
+    ),
+    "entityId" / Switch(
+        this.event,
+        {
+            1: Int32sb,
+            2: Int32sb,
+        },
+        default=Pass,
+    ),
+    "message" / Switch(
+        this.event,
+        {
+            2: PascalString(VarInt, "utf-8"),
+        },
+        default=Pass,
+    ),
 ),
-packet_entity_teleport = Struct(
+None)
+
+
+packet_entity_teleport, _ = (Struct(
     "entityId" / VarInt,
     "x" / Float64b,
     "y" / Float64b,
     "z" / Float64b,
-    "yaw" / Int8sn,
-    "pitch" / Int8sn,
+    "yaw" / Int8sb,
+    "pitch" / Int8sb,
     "onGround" / Flag,
 ),
-packet_statistics = Struct(
-    "entries" / Array(
+None)
+
+
+packet_statistics, _ = (Struct(
+    "entries" / PrefixedArray(
         VarInt,
         Struct(
             "name" / PascalString(VarInt, "utf-8"),
@@ -585,38 +941,66 @@ packet_statistics = Struct(
         ),
     ),
 ),
-packet_entity_status = Struct(
-    "entityId" / Int32sn,
-    "entityStatus" / Int8sn,
+None)
+
+
+packet_entity_status, _ = (Struct(
+    "entityId" / Int32sb,
+    "entityStatus" / Int8sb,
 ),
-packet_block_action = Struct(
+None)
+
+
+packet_block_action, _ = (Struct(
     "location" / BitStruct(
         "x" / BitsInteger(26, signed=True),
         "y" / BitsInteger(12, signed=True),
         "z" / BitsInteger(26, signed=True),
     ),
-    "byte1" / Int8un,
-    "byte2" / Int8un,
+    "byte1" / Int8ub,
+    "byte2" / Int8ub,
     "blockId" / VarInt,
 ),
-packet_title = Struct(
+None)
+
+
+packet_title, _ = (Struct(
     "action" / VarInt,
-    "text" / Switch(this.action, {
-        "0": PascalString(VarInt, "utf-8"),
-        "1": PascalString(VarInt, "utf-8"),
-        "2": PascalString(VarInt, "utf-8"),
-    }),
-    "fadeIn" / Switch(this.action, {
-        "3": Int32sn,
-    }),
-    "stay" / Switch(this.action, {
-        "3": Int32sn,
-    }),
-    "fadeOut" / Switch(this.action, {
-        "3": Int32sn,
-    }),
+    "text" / Switch(
+        this.action,
+        {
+            0: PascalString(VarInt, "utf-8"),
+            1: PascalString(VarInt, "utf-8"),
+            2: PascalString(VarInt, "utf-8"),
+        },
+        default=Pass,
+    ),
+    "fadeIn" / Switch(
+        this.action,
+        {
+            3: Int32sb,
+        },
+        default=Pass,
+    ),
+    "stay" / Switch(
+        this.action,
+        {
+            3: Int32sb,
+        },
+        default=Pass,
+    ),
+    "fadeOut" / Switch(
+        this.action,
+        {
+            3: Int32sb,
+        },
+        default=Pass,
+    ),
 ),
-packet_block_change = Struct(
+None)
+
+
+packet_block_change, _ = (Struct(
     "location" / BitStruct(
         "x" / BitsInteger(26, signed=True),
         "y" / BitsInteger(12, signed=True),
@@ -624,60 +1008,78 @@ packet_block_change = Struct(
     ),
     "type" / VarInt,
 ),
-packet_spawn_entity_weather = Struct(
+None)
+
+
+packet_spawn_entity_weather, _ = (Struct(
     "entityId" / VarInt,
-    "type" / Int8sn,
+    "type" / Int8sb,
     "x" / Float64b,
     "y" / Float64b,
     "z" / Float64b,
 ),
-packet_map_chunk = Struct(
-    "x" / Int32sn,
-    "z" / Int32sn,
+None)
+
+
+packet_map_chunk, _ = (Struct(
+    "x" / Int32sb,
+    "z" / Int32sb,
     "groundUp" / Flag,
     "bitMap" / VarInt,
     "chunkData" / PrefixedBuffer(
         VarInt,
     ),
-    "blockEntities" / Array(
+    "blockEntities" / PrefixedArray(
         VarInt,
         NBT,
     ),
 ),
-packet_spawn_entity_living = Struct(
+None)
+
+
+packet_spawn_entity_living, _ = (Struct(
     "entityId" / VarInt,
-    "entityUUID" / String(32),
+    "entityUUID" / PaddedString(16, "utf8"),
     "type" / VarInt,
     "x" / Float64b,
     "y" / Float64b,
     "z" / Float64b,
-    "yaw" / Int8sn,
-    "pitch" / Int8sn,
-    "headPitch" / Int8sn,
-    "velocityX" / Int16sn,
-    "velocityY" / Int16sn,
-    "velocityZ" / Int16sn,
+    "yaw" / Int8sb,
+    "pitch" / Int8sb,
+    "headPitch" / Int8sb,
+    "velocityX" / Int16sb,
+    "velocityY" / Int16sb,
+    "velocityZ" / Int16sb,
     "metadata" / Pass,  # unfinished type UNKNOWN
 ),
-packet_entity_effect = Struct(
+None)
+
+
+packet_entity_effect, _ = (Struct(
     "entityId" / VarInt,
-    "effectId" / Int8sn,
-    "amplifier" / Int8sn,
+    "effectId" / Int8sb,
+    "amplifier" / Int8sb,
     "duration" / VarInt,
-    "hideParticles" / Int8sn,
+    "hideParticles" / Int8sb,
 ),
-packet_login = Struct(
-    "entityId" / Int32sn,
-    "gameMode" / Int8un,
-    "dimension" / Int32sn,
-    "difficulty" / Int8un,
-    "maxPlayers" / Int8un,
+None)
+
+
+packet_login, _ = (Struct(
+    "entityId" / Int32sb,
+    "gameMode" / Int8ub,
+    "dimension" / Int32sb,
+    "difficulty" / Int8ub,
+    "maxPlayers" / Int8ub,
     "levelType" / PascalString(VarInt, "utf-8"),
     "reducedDebugInfo" / Flag,
 ),
-packet_advancements = Struct(
+None)
+
+
+packet_advancements, _ = (Struct(
     "reset" / Flag,
-    "advancementMapping" / Array(
+    "advancementMapping" / PrefixedArray(
         VarInt,
         Struct(
             "key" / PascalString(VarInt, "utf-8"),
@@ -690,10 +1092,18 @@ packet_advancements = Struct(
                         "title" / PascalString(VarInt, "utf-8"),
                         "description" / PascalString(VarInt, "utf-8"),
                         "icon" / Struct(
-                            "blockId" / Int16sn,
-                            "anon" / Switch(this.blockId, {
-                                "-1": Pass,
-                            }),
+                            "blockId" / Int16sb,
+                            "anon" / Switch(
+                                this.blockId,
+                                {
+                                    -1: Pass,
+                                },
+                                default=Struct(
+                                    "itemCount" / Int8sb,
+                                    "itemDamage" / Int16sb,
+                                    "nbtData" / Select(Const(b"\x00"), NBT),
+                                ),
+                            ),
                         ),
                         "frameType" / VarInt,
                         "flags" / BitStruct(
@@ -702,23 +1112,27 @@ packet_advancements = Struct(
                             "show_toast" / BitsInteger(1, signed=False),
                             "has_background_texture" / BitsInteger(1, signed=False),
                         ),
-                        "backgroundTexture" / Switch(this.flags.has_background_texture, {
-                            "1": PascalString(VarInt, "utf-8"),
-                        }),
+                        "backgroundTexture" / Switch(
+                            this.flags.has_background_texture,
+                            {
+                                1: PascalString(VarInt, "utf-8"),
+                            },
+                            default=Pass,
+                        ),
                         "xCord" / Float32b,
                         "yCord" / Float32b,
                     ),
                 ),
-                "criteria" / Array(
+                "criteria" / PrefixedArray(
                     VarInt,
                     Struct(
                         "key" / PascalString(VarInt, "utf-8"),
                         "value" / Pass,
                     ),
                 ),
-                "requirements" / Array(
+                "requirements" / PrefixedArray(
                     VarInt,
-                    Array(
+                    PrefixedArray(
                         VarInt,
                         PascalString(VarInt, "utf-8"),
                     ),
@@ -726,87 +1140,131 @@ packet_advancements = Struct(
             ),
         ),
     ),
-    "identifiers" / Array(
+    "identifiers" / PrefixedArray(
         VarInt,
         PascalString(VarInt, "utf-8"),
     ),
-    "progressMapping" / Array(
+    "progressMapping" / PrefixedArray(
         VarInt,
         Struct(
             "key" / PascalString(VarInt, "utf-8"),
-            "value" / Array(
+            "value" / PrefixedArray(
                 VarInt,
                 Struct(
                     "criterionIdentifier" / PascalString(VarInt, "utf-8"),
                     "criterionProgress" / Optional(
-                        Int64un,
+                        Int64ub,
                     ),
                 ),
             ),
         ),
     ),
 ),
-packet_named_entity_spawn = Struct(
+None)
+
+
+packet_named_entity_spawn, _ = (Struct(
     "entityId" / VarInt,
-    "playerUUID" / String(32),
+    "playerUUID" / PaddedString(16, "utf8"),
     "x" / Float64b,
     "y" / Float64b,
     "z" / Float64b,
-    "yaw" / Int8sn,
-    "pitch" / Int8sn,
+    "yaw" / Int8sb,
+    "pitch" / Int8sb,
     "metadata" / Pass,  # unfinished type UNKNOWN
 ),
-packet_entity = Struct(
+None)
+
+
+packet_entity, _ = (Struct(
     "entityId" / VarInt,
 ),
-packet_difficulty = Struct(
-    "difficulty" / Int8un,
+None)
+
+
+packet_difficulty, _ = (Struct(
+    "difficulty" / Int8ub,
 ),
-packet_update_time = Struct(
-    "age" / Int64sn,
-    "time" / Int64sn,
+None)
+
+
+packet_update_time, _ = (Struct(
+    "age" / Int64sb,
+    "time" / Int64sb,
 ),
-packet_experience = Struct(
+None)
+
+
+packet_experience, _ = (Struct(
     "experienceBar" / Float32b,
     "level" / VarInt,
     "totalExperience" / VarInt,
 ),
-packet_entity_equipment = Struct(
+None)
+
+
+packet_entity_equipment, _ = (Struct(
     "entityId" / VarInt,
     "slot" / VarInt,
     "item" / Struct(
-        "blockId" / Int16sn,
-        "anon" / Switch(this.blockId, {
-            "-1": Pass,
-        }),
+        "blockId" / Int16sb,
+        "anon" / Switch(
+            this.blockId,
+            {
+                -1: Pass,
+            },
+            default=Struct(
+                "itemCount" / Int8sb,
+                "itemDamage" / Int16sb,
+                "nbtData" / Select(Const(b"\x00"), NBT),
+            ),
+        ),
     ),
 ),
-packet_entity_destroy = Struct(
-    "entityIds" / Array(
+None)
+
+
+packet_entity_destroy, _ = (Struct(
+    "entityIds" / PrefixedArray(
         VarInt,
         VarInt,
     ),
 ),
-packet_animation = Struct(
+None)
+
+
+packet_animation, _ = (Struct(
     "entityId" / VarInt,
-    "animation" / Int8un,
+    "animation" / Int8ub,
 ),
-packet_rel_entity_move = Struct(
+None)
+
+
+packet_rel_entity_move, _ = (Struct(
     "entityId" / VarInt,
-    "dX" / Int16sn,
-    "dY" / Int16sn,
-    "dZ" / Int16sn,
+    "dX" / Int16sb,
+    "dY" / Int16sb,
+    "dZ" / Int16sb,
     "onGround" / Flag,
 ),
-packet_camera = Struct(
+None)
+
+
+packet_camera, _ = (Struct(
     "cameraId" / VarInt,
 ),
-packet_position = Struct(
+None)
+
+
+packet_position, _ = (Struct(
     "x" / Float64b,
     "y" / Float64b,
     "z" / Float64b,
     "yaw" / Float32b,
     "pitch" / Float32b,
-    "flags" / Int8sn,
+    "flags" / Int8sb,
     "teleportId" / VarInt,
 ),
+None)
+
+

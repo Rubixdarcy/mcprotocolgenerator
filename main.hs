@@ -41,7 +41,7 @@ makePath t = makeElement <$> splitOn "/" t
     makeElement s = Literal s
 
 renderPath :: [PathElement] -> IO ()
-renderPath path = mapM_ renderElement path
+renderPath = mapM_ renderElement
   where
     renderElement (Literal s) = putStr $ "." ++ s
     renderElement DotDot      = putStr "._"
@@ -179,8 +179,9 @@ renderTopLevel (Container fields) =
          Just (Named _ (Switch _ packets _)) ->
              sequence_ [do putStr "packet_"
                            TextIO.putStr p
-                           putStr " = "
+                           putStr ", _ = ("
                            renderMCType 0 t
+                           putStr "None)\n\n\n"
                         | (p, t) <- Map.toList packets]
          _ -> error "Failed to find a valid params field"
 renderTopLevel _ = error "Top level object should be a contaianer"
@@ -201,13 +202,21 @@ renderMCType n (Container fields) = do
     --putStr "\n"
     renderIndent n
     putStr "),\n"
-renderMCType n (Switch on items _) = do -- TODO handle default
-    putStr "Switch(this"
+renderMCType n (Switch on items def) = do
+    putStr "Switch(\n"
+    renderIndent (n+1)
+    putStr "this"
     renderPath $ makePath $ unpack on
-    putStr ", {\n"
-    sequence_ [renderIndent (n+1) >> putStr (show k) >> putStr ": " >> renderMCType (n+1) v | (k, v) <- Map.toList items]
-    renderIndent n
-    putStr "}),\n"
+    putStr ",\n"
+    renderIndent (n+1)
+    putStr "{\n"
+    sequence_ [renderIndent (n+2) >> TextIO.putStr k >> putStr ": " >> renderMCType (n+2) v | (k, v) <- Map.toList items]
+    renderIndent (n+1)
+    putStr "},\n"
+    renderIndent (n+1)
+    putStr "default="
+    renderMCType (n+1) def
+    closeParen n
 renderMCType n (Bitfield arr) = do
     putStr "BitStruct(\n"
     sequence_ (( \(name, size, signed) ->
@@ -221,25 +230,25 @@ renderMCType n (Bitfield arr) = do
 renderMCType _ (PString _) = putStr "PascalString(VarInt, \"utf-8\"),\n"
 renderMCType _ F32    = putStr "Float32b,\n"
 renderMCType _ F64    = putStr "Float64b,\n"
-renderMCType _ U8     = putStr "Int8un,\n"
-renderMCType _ U16    = putStr "Int16un,\n"
-renderMCType _ U64    = putStr "Int64un,\n"
-renderMCType _ I8     = putStr "Int8sn,\n"
-renderMCType _ I16    = putStr "Int16sn,\n"
-renderMCType _ I32    = putStr "Int32sn,\n"
-renderMCType _ I64    = putStr "Int64sn,\n"
+renderMCType _ U8     = putStr "Int8ub,\n"
+renderMCType _ U16    = putStr "Int16ub,\n"
+renderMCType _ U64    = putStr "Int64ub,\n"
+renderMCType _ I8     = putStr "Int8sb,\n"
+renderMCType _ I16    = putStr "Int16sb,\n"
+renderMCType _ I32    = putStr "Int32sb,\n"
+renderMCType _ I64    = putStr "Int64sb,\n"
 renderMCType _ Void   = putStr "Pass,\n"
 renderMCType _ VarInt = putStr "VarInt,\n"
 renderMCType _ MCBool = putStr "Flag,\n"
-renderMCType _ UUID   = putStr "String(32),\n"
+renderMCType _ UUID   = putStr "PaddedString(16, \"utf8\"),\n"
 renderMCType _ NBT    = putStr "NBT,\n"
-renderMCType _ OptionalNBT = putStr "Select(Value(b\"\\x00\"), NBT),\n"
+renderMCType _ OptionalNBT = putStr "Select(Const(b\"\\x00\"), NBT),\n"
 renderMCType n (Buffer mcType) = do
     putStr "PrefixedBuffer(\n"
     hanging (n+1) mcType
     closeParen n
 renderMCType n (MCArray countType dataType) = do
-    putStr "Array(\n"
+    putStr "PrefixedArray(\n"
     hanging (n+1) countType
     hanging (n+1) dataType
     closeParen n
