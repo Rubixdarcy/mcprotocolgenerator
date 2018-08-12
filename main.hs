@@ -1,4 +1,8 @@
+-- stack --resolver lts-11.12 script
+
 {-# LANGUAGE OverloadedStrings #-}
+
+module Main where
 
 import Prelude hiding (readFile)
 import qualified Data.HashMap.Strict as Map
@@ -9,11 +13,12 @@ import Data.Maybe (fromJust)
 import Data.Text (Text, unpack)
 import qualified Data.Vector as Vec
 import Control.Applicative (liftA2, liftA3)
-import Control.Monad (void)
+import Control.Monad (void, foldM, forM_)
 import qualified Data.Text.IO as TextIO
 import Data.List (find)
 import Debug.Trace
 import Data.List.Split (splitOn)
+
 
 
 data MCField = Named Text MCType | Anon MCType deriving (Show)
@@ -33,6 +38,12 @@ data MCType = VarInt | U16 | U8 | I64 | I32 | I8 | MCBool |
             deriving (Show)
 
 data PathElement = Literal String | DotDot deriving (Show)
+
+packetLocations :: [[Text]]
+packetLocations =
+    --[ ["play"       , "toClient", "types"]
+    [["handshaking", "toServer", "types"]
+    ]
 
 makePath :: String -> [PathElement]
 makePath t = makeElement <$> splitOn "/" t
@@ -54,17 +65,22 @@ main = readFile sourcePath >>= \j ->
     let jsonData = fromJust $ (decode :: ByteString -> Maybe Object) j in
         mainMCType jsonData -- >> putStr "\n\n\n" >> mainMapping jsonData
 
+
 mainMCType :: Object -> IO ()
 mainMCType jsonData =
-        case parse getTypeHashMapParser jsonData of
-             Success typeRef ->
-                 case parse (\jData -> (jData .: "play") >>= (.: "toClient") >>= (.: "types") >>= (.: "packet")) jsonData of
-                      Success value ->
-                          case parse (parseMCType typeRef) value of
-                               Success mcType -> renderTopLevel mcType
-                               Error err -> print err
-                      _ -> error "Failed to parse top level"
-             _ -> error "Failed to parse top level"
+    case parse getTypeHashMapParser jsonData of
+        Success typeRef ->
+            forM_ packetLocations printPackets
+          where
+            printPackets :: [Text] -> IO ()
+            printPackets path =
+                case (parse (\jData -> foldM (.:) jData path >>= (.: "packet")) jsonData) of
+                    Success value ->
+                        case parse (parseMCType typeRef) (trace (show value) value) of
+                            Success mcType -> renderTopLevel mcType
+                            Error err -> print err
+                    Error err -> print err
+        _ -> error "Failed to parse types"
 
 getTypeHashMapParser :: Object -> Parser Object
 getTypeHashMapParser root =
@@ -170,7 +186,7 @@ parseMCField typeRef =
 
 renderTopLevel :: MCType -> IO ()
 renderTopLevel (Container fields) =
-    let m = find (\f ->
+    let m = trace (show fields) $ find (\f ->
                     case f of
                          Named "params" _ -> True
                          _ -> False
