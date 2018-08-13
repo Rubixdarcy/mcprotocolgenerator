@@ -9,8 +9,9 @@ import qualified Data.HashMap.Strict as Map
 import Data.ByteString.Lazy (readFile, ByteString)
 import Data.Aeson
 import Data.Aeson.Types
+import Data.Monoid ((<>))
 import Data.Maybe (fromJust)
-import Data.Text (Text, unpack)
+import Data.Text (Text, unpack, pack)
 import qualified Data.Vector as Vec
 import Control.Applicative (liftA2, liftA3)
 import Control.Monad (void, foldM, forM_)
@@ -51,11 +52,12 @@ makePath t = makeElement <$> splitOn "/" t
     makeElement ".." = DotDot
     makeElement s = Literal s
 
-renderPath :: [PathElement] -> IO ()
-renderPath = mapM_ renderElement
+renderPath :: [PathElement] -> Text
+renderPath = foldMap renderElement
   where
-    renderElement (Literal s) = putStr $ "." ++ s
-    renderElement DotDot      = putStr "._"
+    renderElement :: PathElement -> Text
+    renderElement (Literal s) = "." <> pack s
+    renderElement DotDot      = "._"
 
 sourcePath :: String
 sourcePath = "minecraft-data/data/pc/1.12.2/protocol.json"
@@ -197,90 +199,95 @@ renderTopLevel (Container fields) =
              sequence_ [do putStr "packet_"
                            TextIO.putStr p
                            putStr ", _ = ("
-                           renderMCType 0 t
+                           TextIO.putStr $ renderMCType 0 t
                            putStr "None)\n\n\n"
                         | (p, t) <- Map.toList packets]
          _ -> error "Failed to find a valid params field"
 renderTopLevel _ = error "Top level object should be a contaianer"
 
-renderIndent :: Int -> IO ()
-renderIndent n = putStr $ concat $ replicate (n * 4) " "
+renderIndent :: Int -> Text
+renderIndent n = mconcat $ replicate (n * 4) " "
 
-hanging :: Int -> MCType -> IO ()
-hanging n mcType = renderIndent n >> renderMCType n mcType
+hanging :: Int -> MCType -> Text
+hanging n mcType = renderIndent n <> renderMCType n mcType
 
-closeParen :: Int -> IO ()
-closeParen n = renderIndent n >> putStr "),\n"
+closeParen :: Int -> Text
+closeParen n = renderIndent n <> "),\n"
 
-renderMCType :: Int -> MCType -> IO()
-renderMCType n (Container fields) = do
-    putStr "Struct(\n"
-    sequence_ [renderIndent (n+1) >> renderMCField (n+1) f | f <- fields]
-    --putStr "\n"
-    renderIndent n
-    putStr "),\n"
-renderMCType n (Switch on items def) = do
-    putStr "Switch(\n"
-    renderIndent (n+1)
-    putStr "this"
-    renderPath $ makePath $ unpack on
-    putStr ",\n"
-    renderIndent (n+1)
-    putStr "{\n"
-    sequence_ [renderIndent (n+2) >> TextIO.putStr k >> putStr ": " >> renderMCType (n+2) v | (k, v) <- Map.toList items]
-    renderIndent (n+1)
-    putStr "},\n"
-    renderIndent (n+1)
-    putStr "default="
-    renderMCType (n+1) def
-    closeParen n
-renderMCType n (Bitfield arr) = do
-    putStr "BitStruct(\n"
-    sequence_ (( \(name, size, signed) ->
-        do renderIndent (n+1)
-           putStr "\""
-           TextIO.putStr name
-           putStr $ "\" / BitsInteger(" ++ show size ++ ", signed=" ++ show signed ++ "),\n"
-        ) <$> arr)
-    renderIndent n
-    putStr "),\n"
-renderMCType _ (PString _) = putStr "PascalString(VarInt, \"utf-8\"),\n"
-renderMCType _ F32    = putStr "Float32b,\n"
-renderMCType _ F64    = putStr "Float64b,\n"
-renderMCType _ U8     = putStr "Int8ub,\n"
-renderMCType _ U16    = putStr "Int16ub,\n"
-renderMCType _ U64    = putStr "Int64ub,\n"
-renderMCType _ I8     = putStr "Int8sb,\n"
-renderMCType _ I16    = putStr "Int16sb,\n"
-renderMCType _ I32    = putStr "Int32sb,\n"
-renderMCType _ I64    = putStr "Int64sb,\n"
-renderMCType _ Void   = putStr "Pass,\n"
-renderMCType _ VarInt = putStr "VarInt,\n"
-renderMCType _ MCBool = putStr "Flag,\n"
-renderMCType _ UUID   = putStr "PaddedString(16, \"utf8\"),\n"
-renderMCType _ NBT    = putStr "NBT,\n"
-renderMCType _ OptionalNBT = putStr "Select(Const(b\"\\x00\"), NBT),\n"
-renderMCType n (Buffer mcType) = do
-    putStr "PrefixedBuffer(\n"
-    hanging (n+1) mcType
-    closeParen n
-renderMCType n (MCArray countType dataType) = do
-    putStr "PrefixedArray(\n"
-    hanging (n+1) countType
-    hanging (n+1) dataType
-    closeParen n
-renderMCType n (Option mcType) = do
-    putStr "Optional(\n"
-    hanging (n+1) mcType
-    closeParen n
-renderMCType _ mcType = putStr $ "Pass,  # unfinished type " ++ take 10 (show mcType) ++ "\n"
+renderMCType :: Int -> MCType -> Text
+renderMCType n (Container fields) = mconcat
+    [ "Struct(\n"
+    , mconcat [renderIndent (n+1) <> renderMCField (n+1) f | f <- fields]
+      --putStr "\n"
+    , renderIndent n
+    , "),\n" ]
+renderMCType n (Switch on items def) = mconcat
+    [ "Switch(\n"
+    , renderIndent (n+1)
+    , "this"
+    , renderPath $ makePath $ unpack on
+    , ",\n"
+    , renderIndent (n+1)
+    , "{\n"
+    , mconcat [renderIndent (n+2) <> k <> ": " <> renderMCType (n+2) v | (k, v) <- Map.toList items]
+    , renderIndent (n+1)
+    , "},\n"
+    , renderIndent (n+1)
+    , "default="
+    , renderMCType (n+1) def
+    , closeParen n ]
+renderMCType n (Bitfield arr) = mconcat
+    [ "BitStruct(\n"
+    , foldMap (\(name, size, signed) -> mconcat
+        [ renderIndent (n+1)
+        , "\""
+        , name
+        , "\" / BitsInteger(" <> pack (show size) <> ", signed=" <> pack (show signed) <> "),\n"
+        ]
+        ) arr
+    , renderIndent n
+    , "),\n" ]
+renderMCType _ (PString _) = "PascalString(VarInt, \"utf-8\"),\n"
+renderMCType _ F32         = "Float32b,\n"
+renderMCType _ F64         = "Float64b,\n"
+renderMCType _ U8          = "Int8ub,\n"
+renderMCType _ U16         = "Int16ub,\n"
+renderMCType _ U64         = "Int64ub,\n"
+renderMCType _ I8          = "Int8sb,\n"
+renderMCType _ I16         = "Int16sb,\n"
+renderMCType _ I32         = "Int32sb,\n"
+renderMCType _ I64         = "Int64sb,\n"
+renderMCType _ Void        = "Pass,\n"
+renderMCType _ VarInt      = "VarInt,\n"
+renderMCType _ MCBool      = "Flag,\n"
+renderMCType _ UUID        = "PaddedString(16, \"utf8\"),\n"
+renderMCType _ NBT         = "NBT,\n"
+renderMCType _ OptionalNBT = "Select(Const(b\"\\x00\"), NBT),\n"
+renderMCType n (Buffer mcType) = mconcat
+    [ "PrefixedBuffer(\n"
+    , hanging (n+1) mcType
+    , closeParen n ]
+renderMCType n (MCArray countType dataType) = mconcat
+    [ "PrefixedArray(\n"
+    , hanging (n+1) countType
+    , hanging (n+1) dataType
+    , closeParen n ]
+renderMCType n (Option mcType) = mconcat
+    [ "Optional(\n"
+    , hanging (n+1) mcType
+    , closeParen n ]
+renderMCType _ mcType = "Pass,  # unfinished type "
+               `mappend` (pack $ take 10 (show mcType))
+               `mappend` "\n"
 
-renderMCField :: Int -> MCField -> IO ()
-renderMCField n field = do
-    let (name, mcType) = case field of
-                             Named na t -> (na, t)
-                             Anon t -> ("anon", t)
-    putStr "\""
-    TextIO.putStr name
-    putStr "\" / "
-    renderMCType n mcType
+renderMCField :: Int -> MCField -> Text
+renderMCField n field = mconcat
+    [ "\""
+    , name
+    , "\" / "
+    , renderMCType n mcType
+    ]
+  where
+    (name, mcType) = case field of
+        Named na t -> (na, t)
+        Anon t -> ("anon", t)
