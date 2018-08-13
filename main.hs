@@ -41,8 +41,8 @@ data PathElement = Literal String | DotDot deriving (Show)
 
 packetLocations :: [[Text]]
 packetLocations =
-    --[ ["play"       , "toClient", "types"]
-    [["handshaking", "toServer", "types"]
+    [ ["play"       , "toClient", "types"]
+    , ["handshaking", "toServer", "types"]
     ]
 
 makePath :: String -> [PathElement]
@@ -68,23 +68,23 @@ main = readFile sourcePath >>= \j ->
 
 mainMCType :: Object -> IO ()
 mainMCType jsonData =
-    case parse getTypeHashMapParser jsonData of
-        Success typeRef ->
-            forM_ packetLocations printPackets
-          where
-            printPackets :: [Text] -> IO ()
-            printPackets path =
+    forM_ packetLocations printPackets
+  where
+    printPackets :: [Text] -> IO ()
+    printPackets path =
+        case parse (getTypeHashMapParser path) jsonData of
+            Success typeRef ->
                 case (parse (\jData -> foldM (.:) jData path >>= (.: "packet")) jsonData) of
                     Success value ->
-                        case parse (parseMCType typeRef) (trace (show value) value) of
+                        case parse (parseMCType typeRef) value of
                             Success mcType -> renderTopLevel mcType
                             Error err -> print err
                     Error err -> print err
-        _ -> error "Failed to parse types"
+            _ -> error "Failed to parse types"
 
-getTypeHashMapParser :: Object -> Parser Object
-getTypeHashMapParser root =
-    liftA2 Map.union (root .: "types")  (root .: "play" >>= (.: "toClient") >>= (.: "types"))
+getTypeHashMapParser :: [Text] -> Object -> Parser Object
+getTypeHashMapParser path root =
+    liftA2 Map.union (root .: "types") (foldM (.:) root path)
 
 
 mainMapping :: Object -> IO ()
@@ -122,47 +122,48 @@ parseMCType :: Object -> Value -> Parser MCType
 parseMCType typeRef value =
     case value of
          String t -> case t of
-                          "varint"      -> return VarInt
-                          "u16"         -> return U16
-                          "u8"          -> return U8
-                          "i64"         -> return I64
-                          "i32"         -> return I32
-                          "i8"          -> return I8
-                          "bool"        -> return MCBool
-                          "i16"         -> return I16
-                          "f32"         -> return F32
-                          "f64"         -> return F64
-                          "UUID"        -> return UUID
-                          "void"        -> return Void
-                          "restBuffer"  -> return RestBuffer
-                          "nbt"         -> return NBT
-                          "optionalNbt" -> return OptionalNBT
-                          "u64"         -> return U64
-                          _ -> typeRef .: t >>= parseMCType typeRef
-         Array v -> do  v0 <- v `getItem` 0
-                        v1 <- v `getItem` 1
-                        case v0 of
-                             "container" ->
-                                 (withArray "container field array" $ \fields ->
-                                      Container <$> traverse (parseMCField typeRef) (Vec.toList fields)
-                                 ) v1
-                             "mapper" -> Mapper <$> parseMCType typeRef v1
-                             "switch" -> (withObject "switch description object" $ \o ->
-                                            liftA3 Switch
-                                               (o .: "compareTo")
-                                               ((o .: "fields") >>= withObject "switch mapping" (traverse (parseMCType typeRef)))
-                                               (((o .:? "default") .!= String "void") >>= parseMCType typeRef)
-                                         ) v1
-                             "pstring" -> PString <$> parseMCType typeRef v1
-                             "array" -> withObject "array types object" (\o ->
-                                 do countType <- ((o .:? "countType") .!= String "varint") >>= parseMCType typeRef
-                                    dataType <- o .: "type" >>= parseMCType typeRef
-                                    return $ MCArray countType dataType
-                                 ) v1
-                             "bitfield" -> withArray "bitfield array" handleBitfield v1
-                             "option" -> Option <$> parseMCType typeRef v1
-                             "buffer" -> Buffer <$> withObject "buffer args" (\o -> o .: "countType" >>= parseMCType typeRef) v1
-                             _ -> return UNKNOWN -- Unknown complex type
+             "varint"      -> return VarInt
+             "u16"         -> return U16
+             "u8"          -> return U8
+             "i64"         -> return I64
+             "i32"         -> return I32
+             "i8"          -> return I8
+             "bool"        -> return MCBool
+             "i16"         -> return I16
+             "f32"         -> return F32
+             "f64"         -> return F64
+             "UUID"        -> return UUID
+             "void"        -> return Void
+             "restBuffer"  -> return RestBuffer
+             "nbt"         -> return NBT
+             "optionalNbt" -> return OptionalNBT
+             "u64"         -> return U64
+             _ -> typeRef .: t >>= parseMCType typeRef
+         Array v -> do
+             v0 <- v `getItem` 0
+             v1 <- v `getItem` 1
+             case v0 of
+                  "container" ->
+                      (withArray "container field array" $ \fields ->
+                           Container <$> traverse (parseMCField typeRef) (Vec.toList fields)
+                      ) v1
+                  "mapper" -> Mapper <$> parseMCType typeRef v1
+                  "switch" -> (withObject "switch description object" $ \o ->
+                                 liftA3 Switch
+                                    (o .: "compareTo")
+                                    ((o .: "fields") >>= withObject "switch mapping" (traverse (parseMCType typeRef)))
+                                    (((o .:? "default") .!= String "void") >>= parseMCType typeRef)
+                              ) v1
+                  "pstring" -> PString <$> parseMCType typeRef v1
+                  "array" -> withObject "array types object" (\o ->
+                      do countType <- ((o .:? "countType") .!= String "varint") >>= parseMCType typeRef
+                         dataType <- o .: "type" >>= parseMCType typeRef
+                         return $ MCArray countType dataType
+                      ) v1
+                  "bitfield" -> withArray "bitfield array" handleBitfield v1
+                  "option" -> Option <$> parseMCType typeRef v1
+                  "buffer" -> Buffer <$> withObject "buffer args" (\o -> o .: "countType" >>= parseMCType typeRef) v1
+                  _ -> return UNKNOWN -- Unknown complex type
          x -> return $ trace ("<unknown: " ++ show x ++ ">") UNKNOWN
 
 handleBitfield :: Array -> Parser MCType
@@ -186,7 +187,7 @@ parseMCField typeRef =
 
 renderTopLevel :: MCType -> IO ()
 renderTopLevel (Container fields) =
-    let m = trace (show fields) $ find (\f ->
+    let m = find (\f ->
                     case f of
                          Named "params" _ -> True
                          _ -> False
