@@ -19,6 +19,8 @@ import qualified Data.Text.IO as TextIO
 import Data.List (find)
 import Debug.Trace
 import Data.List.Split (splitOn)
+import System.Directory
+import Data.Monoid ((<>))
 
 import MCPG.MCType (parseMCType)
 import MCPG.Render (renderTopLevel)
@@ -27,18 +29,41 @@ import MCPG.Render (renderTopLevel)
 
 
 
-data PacketSet = PacketSet FilePath [Text]
+data PacketDirection = ToClient | ToServer
+directionJSONName :: PacketDirection -> Text
+directionJSONName ToClient = "toClient"
+directionJSONName ToServer = "toServer"
+
+data PacketSet = PacketSet Text PacketDirection
 packetLocations :: [PacketSet]
 packetLocations =
-    [ PacketSet "out_files/play.py"        ["play"       , "toClient", "types"]
-    , PacketSet "out_files/handshaking.py" ["handshaking", "toServer", "types"]
-    , PacketSet "out_files/login.py"       ["login", "toServer", "types"]
+    [ PacketSet "play" ToClient
+    -- , PacketSet "out_files/handshaking.py" ["handshaking", "toServer", "types"]
+    -- , PacketSet "out_files/login.py"       ["login", "toServer", "types"]
     ]
 
 
 
 sourcePath :: String
 sourcePath = "minecraft-data/data/pc/1.12.2/protocol.json"
+
+
+generateModule :: PacketSet -> Text -> IO ()
+generateModule (PacketSet state direction) content = do
+    ensureDir stateDir
+    ensureFile stateInit
+    TextIO.writeFile packetFile content
+  where
+    stateDir   = "out_files/" ++ unpack state
+    stateInit  = stateDir <> "/.__init__.py"
+    packetFile = stateDir <> "/" <> (unpack $ directionJSONName direction) <> ".py"
+    ensureDir dir = do
+        dirExists <- doesDirectoryExist dir
+        if not dirExists then createDirectory dir else return ()
+    ensureFile file = do
+        fileExists <- doesFileExist stateDir
+        if not fileExists then TextIO.writeFile file "" else return ()
+
 
 generateFiles :: IO ()
 generateFiles = readFile sourcePath >>= \j ->
@@ -50,16 +75,18 @@ mainMCType jsonData =
     forM_ packetLocations printPackets
   where
     printPackets :: PacketSet -> IO ()
-    printPackets (PacketSet filepath path) =
+    printPackets ps@(PacketSet state direction) =
         case parse (getTypeHashMapParser path) jsonData of
             Success typeRef ->
                 case (parse (\jData -> foldM (.:) jData path >>= (.: "packet")) jsonData) of
                     Success value ->
                         case parse (parseMCType typeRef) value of
-                            Success mcType -> TextIO.writeFile filepath $ renderTopLevel mcType
+                            Success mcType -> generateModule ps $ renderTopLevel mcType
                             Error err -> print err
                     Error err -> print err
             _ -> error "Failed to parse types"
+      where
+        path =[state, directionJSONName direction, "types"]
 
 getTypeHashMapParser :: [Text] -> Object -> Parser Object
 getTypeHashMapParser path root =
@@ -88,7 +115,5 @@ printMappingItem (key, value) = do
     putStr ": \""
     TextIO.putStr value
     putStr "\",\\n"
-
-
 
 

@@ -19,6 +19,7 @@ dependencies:
   - bytestring
   - split
   - unordered-containers
+  - directory
 
 executables:
   mcprotocolgenerator:
