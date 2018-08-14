@@ -1,1 +1,6 @@
 *.nbt
+
+.stack-work
+mcprotocolgenerator.cabal
+out_files
+testing
