@@ -27,8 +27,6 @@ import MCPG.Render (renderTopLevel)
 
 
 
-
-
 data PacketDirection = ToClient | ToServer
 directionJSONName :: PacketDirection -> Text
 directionJSONName ToClient = "toClient"
@@ -75,45 +73,19 @@ mainMCType jsonData =
     forM_ packetLocations printPackets
   where
     printPackets :: PacketSet -> IO ()
-    printPackets ps@(PacketSet state direction) =
-        case parse (getTypeHashMapParser path) jsonData of
-            Success typeRef ->
-                case (parse (\jData -> foldM (.:) jData path >>= (.: "packet")) jsonData) of
-                    Success value ->
-                        case parse (parseMCType typeRef) value of
-                            Success mcType -> generateModule ps $ renderTopLevel mcType
-                            Error err -> print err
-                    Error err -> print err
-            _ -> error "Failed to parse types"
+    printPackets ps@(PacketSet state direction) = case do
+        typeRef <- parse (getTypeHashMapParser path) jsonData
+        value <- (parse (\jData -> foldM (.:) jData path >>= (.: "packet")) jsonData)
+        mcType <- parse (parseMCType typeRef) value
+        return $ generateModule ps $ renderTopLevel mcType
+      of
+        Success io -> io
+        Error err -> print err
       where
         path =[state, directionJSONName direction, "types"]
 
 getTypeHashMapParser :: [Text] -> Object -> Parser Object
 getTypeHashMapParser path root =
     liftA2 Map.union (root .: "types") (foldM (.:) root path)
-
-
-mainMapping :: Object -> IO ()
-mainMapping jsonData =
-   case parse (\jData -> let k = (jData .: "play" )  >>= (.: "toClient") >>= (.: "types") >>= (.: "packet") in
-                                   ((Vec.! 1) <$> k)
-              ) jsonData of
-       Success obj -> print (obj :: Value)
-       Error e -> print e
-
-
-printMapping :: Map.HashMap Text Text -> IO ()
-printMapping o = void (sequence_ (printMappingItem <$> Map.toList o))
---printMapping o = sequence_ <$> traverse (\(pid, packet) ->
-  --                                     printMappingItem (pid, packet)
-    --                           ) (Map.toList o
-
-printMappingItem :: (Text, Text) -> IO()
-printMappingItem (key, value) = do
-    putStr "    "
-    TextIO.putStr key
-    putStr ": \""
-    TextIO.putStr value
-    putStr "\",\\n"
 
 

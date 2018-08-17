@@ -16,6 +16,7 @@ import qualified Data.Vector as Vec
 import Debug.Trace
 import Control.Applicative (liftA3, liftA2)
 import Data.List.Split
+import Control.Monad ((>=>))
 
 data MCField = Named Text MCType | Anon MCType deriving (Show)
 data MCType = VarInt | U16 | U8 | I64 | I32 | I8 | MCBool |
@@ -29,7 +30,7 @@ data MCType = VarInt | U16 | U8 | I64 | I32 | I8 | MCBool |
             | PString MCType -- contraint counter must be a numeric type
             | EntityMetadataLoop Integer MCType
             | MCArray MCType MCType
-            | Mapper MCType
+            | Mapper MCType (Map.HashMap Text Text)
             | UNKNOWN
             deriving (Show)
 
@@ -64,7 +65,8 @@ parseMCType typeRef value =
                       (withArray "container field array" $ \fields ->
                            Container <$> traverse (parseMCField typeRef) (Vec.toList fields)
                       ) v1
-                  "mapper" -> Mapper <$> parseMCType typeRef v1
+                  "mapper" -> (liftA2 Mapper) ((withObject "omap" (.: "type") v1 ) >>= parseMCType typeRef)
+                                              ((withObject "omap" ((.: "mappings") >=> parseJSON) v1 ))
                   "switch" -> (withObject "switch description object" $ \o ->
                                  liftA3 Switch
                                     (o .: "compareTo")
@@ -82,6 +84,9 @@ parseMCType typeRef value =
                   "buffer" -> Buffer <$> withObject "buffer args" (\o -> o .: "countType" >>= parseMCType typeRef) v1
                   _ -> return UNKNOWN -- Unknown complex type
          x -> return $ trace ("<unknown: " ++ show x ++ ">") UNKNOWN
+
+
+
 
 
 getItem :: Vec.Vector Value -> Int -> Parser Value

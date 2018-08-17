@@ -2,7 +2,7 @@
 
 module MCPG.Render where
 
-import MCPG.MCType (MCType(..), PathElement(..), makePath, MCField(..)) 
+import MCPG.MCType (MCType(..), PathElement(..), makePath, MCField(..))
 import Data.Text hiding (take, replicate, find)
 import qualified Data.HashMap.Strict as Map
 import Data.Monoid ((<>))
@@ -17,13 +17,23 @@ renderPath = foldMap renderElement
 
 
 renderTopLevel :: MCType -> Text
-renderTopLevel (Container fields) =
-    let m = find (\f ->
+renderTopLevel t = renderPackets t <> "\n\n\n" <> renderPacketMapper t
+
+
+fieldNamed :: Text -> [MCField] -> Maybe MCField
+fieldNamed n = find f
+  where
+    f (Named n' _) = n == n'
+    f _            = False
+
+renderPackets :: MCType -> Text
+renderPackets (Container fields) =
+    {- let m = find (\f ->
                     case f of
                          Named "params" _ -> True
                          _ -> False
-                 ) fields in
-    case m of
+                 ) fields in -}
+    case fieldNamed "params" fields of
          Just (Named _ (Switch _ packets _)) ->
              mconcat [mconcat
                  [ "packet_"
@@ -34,7 +44,14 @@ renderTopLevel (Container fields) =
                  ]
              | (p, t) <- Map.toList packets]
          _ -> error "Failed to find a valid params field"
-renderTopLevel _ = error "Top level object should be a contaianer"
+renderPackets _ = error "Top level object should be a contaianer"
+
+renderPacketMapper :: MCType -> Text
+renderPacketMapper (Container fields) =
+    case fieldNamed "name" fields of
+        Just (Named _ (Mapper _ hm)) -> renderMapping "names" ((\t -> "packet_" <> t) <$> hm)
+        Just _             -> "The object named 'mapper' was not a mapper type"
+        _                  -> "There was no field named 'mapper'"
 
 renderIndent :: Int -> Text
 renderIndent n = mconcat $ replicate (n * 4) " "
@@ -122,3 +139,12 @@ renderMCField n field = mconcat
     (name, mcType) = case field of
         Named na t -> (na, t)
         Anon t -> ("anon", t)
+
+
+renderMapping :: Text -> Map.HashMap Text Text -> Text
+renderMapping name mapping =
+    name <> " = {\n" <> mconcat (renderMappingItem <$> Map.toList mapping) <> "}\n"
+
+renderMappingItem :: (Text, Text) -> Text
+renderMappingItem (key, value) = "    " <> key <> ": " <> value <> ",\n"
+
