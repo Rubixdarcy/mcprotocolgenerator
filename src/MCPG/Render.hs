@@ -4,12 +4,15 @@ module MCPG.Render where
 
 import MCPG.MCType (MCType(..), PathElement(..), makePath, MCField(..))
 import Data.Text hiding (take, replicate, find)
+import Data.Text.Read (decimal)
 import qualified Data.HashMap.Strict as Map
 import Data.Monoid ((<>))
 import Data.List
 
 renderPath :: [PathElement] -> Text
-renderPath = foldMap renderElement
+-- Cheating and assuming there is only one exceptional case
+renderPath [DotDot, Literal s] = "._._." <> pack s
+renderPath p = foldMap renderElement p
   where
     renderElement :: PathElement -> Text
     renderElement (Literal s) = "." <> pack s
@@ -17,7 +20,7 @@ renderPath = foldMap renderElement
 
 
 renderTopLevel :: MCType -> Text
-renderTopLevel t = renderPackets t <> "\n\n\n" <> renderPacketMapper t
+renderTopLevel t = header <> renderPackets t <> "\n\n\n" <> renderPacketMapper t
 
 
 fieldNamed :: Text -> [MCField] -> Maybe MCField
@@ -28,11 +31,6 @@ fieldNamed n = find f
 
 renderPackets :: MCType -> Text
 renderPackets (Container fields) =
-    {- let m = find (\f ->
-                    case f of
-                         Named "params" _ -> True
-                         _ -> False
-                 ) fields in -}
     case fieldNamed "params" fields of
          Just (Named _ (Switch _ packets _)) ->
              mconcat [mconcat
@@ -49,7 +47,7 @@ renderPackets _ = error "Top level object should be a contaianer"
 renderPacketMapper :: MCType -> Text
 renderPacketMapper (Container fields) =
     case fieldNamed "name" fields of
-        Just (Named _ (Mapper _ hm)) -> renderMapping "names" ((\t -> "packet_" <> t) <$> hm)
+        Just (Named _ (Mapper _ hm)) -> renderMapping "mappings" ((\t -> "packet_" <> t) <$> hm)
         Just _             -> "The object named 'mapper' was not a mapper type"
         _                  -> "There was no field named 'mapper'"
 
@@ -77,13 +75,17 @@ renderMCType n (Switch on items def) = mconcat
     , ",\n"
     , renderIndent (n+1)
     , "{\n"
-    , mconcat [renderIndent (n+2) <> k <> ": " <> renderMCType (n+2) v | (k, v) <- Map.toList items]
+    , mconcat [renderIndent (n+2) <> asSwitchItem k <> ": " <> renderMCType (n+2) v | (k, v) <- Map.toList items]
     , renderIndent (n+1)
     , "},\n"
     , renderIndent (n+1)
     , "default="
     , renderMCType (n+1) def
     , closeParen n ]
+  where
+    asSwitchItem k = case decimal k of
+        Right _ -> k
+        Left  _ -> "\"" <> k <> "\""
 renderMCType n (Bitfield arr) = mconcat
     [ "BitStruct(\n"
     , foldMap (\(name, size, signed) -> mconcat
@@ -108,7 +110,7 @@ renderMCType _ I64         = "Int64sb,\n"
 renderMCType _ Void        = "Pass,\n"
 renderMCType _ VarInt      = "VarInt,\n"
 renderMCType _ MCBool      = "Flag,\n"
-renderMCType _ UUID        = "PaddedString(16, \"utf8\"),\n"
+renderMCType _ UUID        = "Bytes(16),\n"
 renderMCType _ NBT         = "NBT,\n"
 renderMCType _ OptionalNBT = "Select(Const(b\"\\x00\"), NBT),\n"
 renderMCType n (Buffer mcType) = mconcat
@@ -148,3 +150,10 @@ renderMapping name mapping =
 renderMappingItem :: (Text, Text) -> Text
 renderMappingItem (key, value) = "    " <> key <> ": " <> value <> ",\n"
 
+
+header :: Text
+header = "from construct import *\n\
+         \from ...NBTConstruct import NBT\n\
+         \\n\
+         \PrefixedBuffer = lambda t: PrefixedArray(t, Byte)\n\
+         \\n\n"
