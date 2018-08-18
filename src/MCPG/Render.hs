@@ -146,7 +146,7 @@ renderMCType n (MCArray countType dataType) = mconcat
     , hanging (n+1) dataType
     , closeParen n ]
 renderMCType n (Option mcType) = mconcat
-    [ "Optional(\n"
+    [ "Maybe(\n"
     , hanging (n+1) mcType
     , closeParen n ]
 renderMCType _ mcType = "Pass,  # unfinished type "
