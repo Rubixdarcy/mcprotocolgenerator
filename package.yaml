@@ -21,6 +21,8 @@ dependencies:
   - unordered-containers
   - directory
   - casing
+  - optparse-applicative
+  - filepath
 
 executables:
   mcprotocolgenerator:
