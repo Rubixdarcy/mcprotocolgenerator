@@ -20,6 +20,7 @@ dependencies:
   - split
   - unordered-containers
   - directory
+  - casing
 
 executables:
   mcprotocolgenerator:

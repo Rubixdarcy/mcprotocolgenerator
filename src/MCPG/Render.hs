@@ -3,24 +3,35 @@
 module MCPG.Render where
 
 import MCPG.MCType (MCType(..), PathElement(..), makePath, MCField(..))
-import Data.Text hiding (take, replicate, find)
-import Data.Text.Read (decimal)
+import Data.Text hiding (take, replicate, find, last)
+import Data.Text.Read (signed, decimal)
+import Text.Casing (quietSnake)
 import qualified Data.HashMap.Strict as Map
 import Data.Monoid ((<>))
 import Data.List
 
-renderPath :: [PathElement] -> Text
+renderPathDir :: [PathElement] -> Text
 -- Cheating and assuming there is only one exceptional case
-renderPath [DotDot, Literal s] = "._._." <> pack s
-renderPath p = foldMap renderElement p
+--renderPath [DotDot, Literal s] = "._._." <> pack s
+renderPathDir p = foldMap renderElement p
   where
     renderElement :: PathElement -> Text
-    renderElement (Literal s) = "." <> pack s
+    renderElement (Literal s) = ""
     renderElement DotDot      = "._"
+
+renderPathName :: [PathElement] -> Text
+renderPathName p@(h:_) = case last p of
+    Literal s -> pack s
+    DotDot -> "<PATH WITH NO NAME>"
 
 
 renderTopLevel :: MCType -> Text
-renderTopLevel t = header <> renderPackets t <> "\n\n\n" <> renderPacketMapper t
+renderTopLevel t = header
+                <> renderPackets t
+                <> "\n\n\n"
+                <> renderID2Struct t
+                <> renderID2Name   t
+                <> renderName2ID
 
 
 fieldNamed :: Text -> [MCField] -> Maybe MCField
@@ -44,12 +55,20 @@ renderPackets (Container fields) =
          _ -> error "Failed to find a valid params field"
 renderPackets _ = error "Top level object should be a contaianer"
 
-renderPacketMapper :: MCType -> Text
-renderPacketMapper (Container fields) =
+renderID2Struct :: MCType -> Text
+renderID2Struct (Container fields) =
     case fieldNamed "name" fields of
-        Just (Named _ (Mapper _ hm)) -> renderMapping "mappings" ((\t -> "packet_" <> t) <$> hm)
+        Just (Named _ (Mapper _ hm)) -> renderMapping "id2struct" ((\t -> "packet_" <> t) <$> hm)
         Just _             -> "The object named 'mapper' was not a mapper type"
         _                  -> "There was no field named 'mapper'"
+renderID2Name :: MCType -> Text
+renderID2Name (Container fields) =
+    case fieldNamed "name" fields of
+        Just (Named _ (Mapper _ hm)) -> renderMapping "id2name" ((\t -> "\"packet_" <> t <> "\"") <$> hm)
+        Just _             -> "The object named 'mapper' was not a mapper type"
+        _                  -> "There was no field named 'mapper'"
+renderName2ID :: Text
+renderName2ID = "name2id = {v: k for k, v in id2name.items()}\n"
 
 renderIndent :: Int -> Text
 renderIndent n = mconcat $ replicate (n * 4) " "
@@ -70,8 +89,9 @@ renderMCType n (Container fields) = mconcat
 renderMCType n (Switch on items def) = mconcat
     [ "Switch(\n"
     , renderIndent (n+1)
-    , "this"
-    , renderPath $ makePath $ unpack on
+    , "lambda ctx: ctx", pathDir, ".", pathName 
+    , " if \"" , pathName , "\" in ctx", pathDir, " else "
+    , "ctx", pathDir, "._.", pathName
     , ",\n"
     , renderIndent (n+1)
     , "{\n"
@@ -83,7 +103,10 @@ renderMCType n (Switch on items def) = mconcat
     , renderMCType (n+1) def
     , closeParen n ]
   where
-    asSwitchItem k = case decimal k of
+    path = makePath $ quietSnake $ unpack on
+    pathDir = renderPathDir path
+    pathName = renderPathName path
+    asSwitchItem k = case signed decimal k of
         Right _ -> k
         Left  _ -> "\"" <> k <> "\""
 renderMCType n (Bitfield arr) = mconcat
@@ -139,7 +162,7 @@ renderMCField n field = mconcat
     ]
   where
     (name, mcType) = case field of
-        Named na t -> (na, t)
+        Named na t -> (pack $ quietSnake $ unpack na, t)
         Anon t -> ("anon", t)
 
 
@@ -154,6 +177,5 @@ renderMappingItem (key, value) = "    " <> key <> ": " <> value <> ",\n"
 header :: Text
 header = "from construct import *\n\
          \from ...NBTConstruct import NBT\n\
-         \\n\
-         \PrefixedBuffer = lambda t: PrefixedArray(t, Byte)\n\
+         \from ...MCStructs import *\n\
          \\n\n"

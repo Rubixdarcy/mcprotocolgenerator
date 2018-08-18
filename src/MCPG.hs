@@ -35,7 +35,12 @@ directionJSONName ToServer = "toServer"
 data PacketSet = PacketSet Text PacketDirection
 packetLocations :: [PacketSet]
 packetLocations =
-    [ PacketSet "play" ToClient
+    [ PacketSet "play"        ToClient
+    , PacketSet "play"        ToServer
+    , PacketSet "handshaking" ToClient
+    , PacketSet "handshaking" ToServer
+    , PacketSet "login"       ToClient
+    , PacketSet "login"       ToServer
     -- , PacketSet "out_files/handshaking.py" ["handshaking", "toServer", "types"]
     -- , PacketSet "out_files/login.py"       ["login", "toServer", "types"]
     ]
