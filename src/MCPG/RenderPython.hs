@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module MCPG.Render where
+module MCPG.RenderPython where
 
 import MCPG.MCType (MCType(..), PathElement(..), makePath, MCField(..))
 import Data.Text hiding (take, replicate, find, last)
@@ -13,7 +13,7 @@ import Data.List
 renderPathDir :: [PathElement] -> Text
 -- Cheating and assuming there is only one exceptional case
 --renderPath [DotDot, Literal s] = "._._." <> pack s
-renderPathDir p = foldMap renderElement p
+renderPathDir = foldMap renderElement
   where
     renderElement :: PathElement -> Text
     renderElement (Literal s) = ""
@@ -23,6 +23,7 @@ renderPathName :: [PathElement] -> Text
 renderPathName p@(h:_) = case last p of
     Literal s -> pack s
     DotDot -> "<PATH WITH NO NAME>"
+renderPathName _ = error "Unable to render empty path."
 
 
 renderTopLevel :: MCType -> Text
@@ -58,15 +59,19 @@ renderPackets _ = error "Top level object should be a contaianer"
 renderID2Struct :: MCType -> Text
 renderID2Struct (Container fields) =
     case fieldNamed "name" fields of
-        Just (Named _ (Mapper _ hm)) -> renderMapping "id2struct" ((\t -> "packet_" <> t) <$> hm)
+        Just (Named _ (Mapper _ hm)) -> renderMapping "id2struct" (("packet_" <>) <$> hm)
         Just _             -> "The object named 'mapper' was not a mapper type"
         _                  -> "There was no field named 'mapper'"
+renderID2Struct _ = error "Unable to render id2struct for non container type."
+
 renderID2Name :: MCType -> Text
 renderID2Name (Container fields) =
     case fieldNamed "name" fields of
         Just (Named _ (Mapper _ hm)) -> renderMapping "id2name" ((\t -> "\"packet_" <> t <> "\"") <$> hm)
         Just _             -> "The object named 'mapper' was not a mapper type"
         _                  -> "There was no field named 'mapper'"
+renderID2Name _ = error "Unable to render id2name for non container type."
+
 renderName2ID :: Text
 renderName2ID = "name2id = {v: k for k, v in id2name.items()}\n"
 
@@ -89,7 +94,7 @@ renderMCType n (Container fields) = mconcat
 renderMCType n (Switch on items def) = mconcat
     [ "Switch(\n"
     , renderIndent (n+1)
-    , "lambda ctx: ctx", pathDir, ".", pathName 
+    , "lambda ctx: ctx", pathDir, ".", pathName
     , " if \"" , pathName , "\" in ctx", pathDir, " else "
     , "ctx", pathDir, "._.", pathName
     , ",\n"
@@ -150,7 +155,7 @@ renderMCType n (Option mcType) = mconcat
     , hanging (n+1) mcType
     , closeParen n ]
 renderMCType _ mcType = "Pass,  # unfinished type "
-               `mappend` (pack $ take 10 (show mcType))
+               `mappend` pack (take 10 (show mcType))
                `mappend` "\n"
 
 renderMCField :: Int -> MCField -> Text

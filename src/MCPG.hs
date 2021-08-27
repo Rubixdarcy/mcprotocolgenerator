@@ -14,7 +14,7 @@ import Data.Maybe (fromJust)
 import Data.Text (Text, unpack, pack)
 import qualified Data.Vector as Vec
 import Control.Applicative (liftA2, liftA3)
-import Control.Monad (void, foldM, forM_)
+import Control.Monad (void, foldM, forM_, unless)
 import qualified Data.Text.IO as TextIO
 import Data.List (find)
 import Debug.Trace
@@ -25,7 +25,8 @@ import System.Exit
 import Data.Monoid ((<>))
 
 import MCPG.MCType (parseMCType)
-import MCPG.Render (renderTopLevel)
+import MCPG.RenderPython (renderTopLevel)
+import MCPG.FileSet (FileSet(..), createFileSet)
 import MCPG.Options (Args(..))
 
 
@@ -52,38 +53,31 @@ sourcePath :: String
 sourcePath = "minecraft-data/data/pc/1.12.2/protocol.json"
 
 
-generateModule :: FilePath -> PacketSet -> Text -> IO ()
-generateModule out (PacketSet state direction) content = do
-    ensureDir  out
-    ensureFile outInit
-    ensureDir  stateDir
-    ensureFile stateInit
-    TextIO.writeFile packetFile content
+generateModule :: PacketSet -> Text -> FileSet
+generateModule (PacketSet state direction) content =
+    FileSet
+        [ ("__init__.py", "")
+        , (stateDir </> "__init__.py", "")
+        , (stateDir </> packetFile, content)
+        ]
   where
-    outInit    = out </> "__init__.py"
-    stateDir   = out </> unpack state
-    stateInit  = stateDir </> "__init__.py"
-    packetFile = stateDir <> "/" <> (unpack $ directionJSONName direction) <> ".py"
-    ensureDir dir = do
-        dirExists <- doesDirectoryExist dir
-        if not dirExists then createDirectory dir else return ()
-    ensureFile file = do
-        fileExists <- doesFileExist stateDir
-        if not fileExists then TextIO.writeFile file "" else return ()
+    stateDir   = unpack state
+    packetFile = unpack (directionJSONName direction) <> ".py"
 
 
 generateFiles :: Args -> IO ()
 generateFiles (Args repo v out) = do
+
     exists <- doesDirectoryExist repo
-    if not exists then do
+    unless exists $ do
         putStrLn $ "Could not find directory " ++ repo
         exitWith $ ExitFailure 1
-    else return ()
+
     existsV <- doesDirectoryExist vPath
-    if not existsV then do
+    unless existsV $ do
         putStrLn $ "Could not find version " ++ vPath
         exitWith $ ExitFailure 1
-    else return ()
+
     j <- readFile $ vPath </> "protocol.json"
     let jsonData = fromJust $ (decode :: ByteString -> Maybe Object) j
     mainMCType jsonData (out </> vPythonName)
@@ -93,23 +87,24 @@ generateFiles (Args repo v out) = do
       where
         repl '.' = '_'
         repl c   = c
-    
+
 
 mainMCType :: Object -> FilePath -> IO ()
-mainMCType jsonData out =
+mainMCType jsonData out = do
+    createDirectoryIfMissing False out
     forM_ packetLocations printPackets
   where
     printPackets :: PacketSet -> IO ()
     printPackets ps@(PacketSet state direction) = case do
         typeRef <- parse (getTypeHashMapParser path) jsonData
-        value   <- (parse (\jData -> foldM (.:) jData path >>= (.: "packet")) jsonData)
+        value   <- parse (\jData -> foldM (.:) jData path >>= (.: "packet")) jsonData
         mcType  <- parse (parseMCType typeRef) value
-        return $ generateModule out ps $ renderTopLevel mcType
+        return $ createFileSet out $ generateModule ps $ renderTopLevel mcType
       of
         Success io -> io
         Error err -> print err
       where
-        path =[state, directionJSONName direction, "types"]
+        path = [state, directionJSONName direction, "types"]
 
 getTypeHashMapParser :: [Text] -> Object -> Parser Object
 getTypeHashMapParser path root =

@@ -19,9 +19,22 @@ import Data.List.Split
 import Control.Monad ((>=>))
 
 data MCField = Named Text MCType | Anon MCType deriving (Show)
-data MCType = VarInt | U16 | U8 | I64 | I32 | I8 | MCBool |
-            I16 | F32 | F64 | UUID | U64 |
-            Void | RestBuffer | NBT | OptionalNBT
+data MCType = VarInt
+            | U8
+            | U16
+            | U64
+            | I8
+            | I16
+            | I32
+            | I64
+            | F32
+            | F64
+            | MCBool
+            | UUID
+            | Void
+            | RestBuffer
+            | NBT
+            | OptionalNBT
             | Buffer MCType
             | Container [MCField]
             | Switch Text (Map.HashMap Text MCType) MCType -- constraint String must be able to cast to value of MCType
