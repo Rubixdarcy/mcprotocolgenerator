@@ -2,11 +2,11 @@ name:                mcprotocolgenerator
 version:             0.1.0.0
 #synopsis:
 #description:
-homepage:            https://github.com/githubuser/mcprotocolgenerator#readme
-license:             PublicDomain
+homepage:            https://github.com/Rubixdarcy/mcprotocolgenerator#README
+license:             MIT
 author:              Darcy Ryan
 maintainer:          darcy150@gmail.com
-copyright:           2018 Darcy Ryan
+copyright:           2021 Darcy Ryan
 category:            Minecraft
 extra-source-files:
 - README.md
